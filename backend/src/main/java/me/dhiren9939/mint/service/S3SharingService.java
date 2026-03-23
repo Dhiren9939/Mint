@@ -6,8 +6,6 @@ import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
 import me.dhiren9939.mint.model.entity.FileMetaData;
 import me.dhiren9939.mint.model.entity.FileState;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -53,16 +51,7 @@ public class S3SharingService implements FileSharingService {
 
     @Override
     public FileMetaData confirmUpload(long fileMetaDataId, String fileCode, String fileUrl) throws FileMetaDataNotFoundException {
-        FileMetaData exampleData = new FileMetaData();
-        exampleData.setFileCode(fileCode);
-        exampleData.setFileUrl(fileUrl);
-        exampleData.setId(fileMetaDataId);
-
-        ExampleMatcher matcher = ExampleMatcher
-                .matching()
-                .withIgnorePaths("isOneTimeDownload", "expiresAt", "downloadCount");
-        Example<FileMetaData> example = Example.of(exampleData, matcher);
-        Optional<FileMetaData> optionalFileMetaData = fileMetaDataRepository.findOne(example);
+        Optional<FileMetaData> optionalFileMetaData = fileMetaDataRepository.findByIdAndFileCodeAndFileUrl(fileMetaDataId,fileCode,fileUrl);
         if (optionalFileMetaData.isEmpty())
             throw new FileMetaDataNotFoundException("Invalid metadata information. File not Found.");
 

@@ -1,22 +1,27 @@
 package me.dhiren9939.mint.service;
 
+import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
 import me.dhiren9939.mint.model.entity.FileMetaData;
 import me.dhiren9939.mint.model.entity.FileState;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,13 +31,13 @@ import static org.mockito.Mockito.when;
 public class S3SharingServiceTest {
 
     @Mock
-    FileStorageService fileStorageService;
+    private FileStorageService fileStorageService;
 
     @Mock
-    FileMetaDataRepository fileMetaDataRepository;
+    private FileMetaDataRepository fileMetaDataRepository;
 
     @Mock
-    CodeGeneratorService generatorService;
+    private CodeGeneratorService generatorService;
 
     @InjectMocks
     private S3SharingService s3SharingService;
@@ -52,13 +57,14 @@ public class S3SharingServiceTest {
         @MethodSource("uploadLinkParams")
         @DisplayName("Should Generate Upload Link")
         @ParameterizedTest(name = "expiry={0}, maxDownload={1}")
-        void shouldGenerateUploadLink(ExpiryDuration expiryDuration, int maxDownload) {
+        public void shouldGenerateUploadLink(ExpiryDuration expiryDuration, int maxDownload) {
             String mockFileCode = "mock12";
             String mockUrl = "https://mockS3Url.com/";
 
             when(generatorService.getRandomCode()).thenReturn(mockFileCode);
             when(fileStorageService.generatePreSignedURL()).thenReturn(mockUrl);
-            when(fileMetaDataRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+            when(fileMetaDataRepository.save(any())).thenAnswer(
+                    invocation -> invocation.getArgument(0));
 
             FileMetaData result = s3SharingService.generateUploadLink(expiryDuration, maxDownload);
 
@@ -79,18 +85,49 @@ public class S3SharingServiceTest {
     @Nested
     @DisplayName("confirmUpload Test")
     class ConfirmUploadTest {
+        @Test
+        @DisplayName("Should confirm uploads correctly")
+        public void shouldConfirmUpload() {
+            long fileMetaDataId = 0;
+            String fileCode = "abcdef";
+            String fileUrl = "https://aws.com/s3/abcdef";
 
-        static Stream<Arguments> confirmUploadParams() {
-            return Stream.of(
-                    Arguments.of(0, "abcdef", "https://aws.com/s3/abcdef"),
-                    Arguments.of(1, "ghijkl", "https://aws.com/s3/ghijkl"));
+            Answer<Optional<FileMetaData>> returnFileData = (InvocationOnMock invocation) -> {
+                long id = invocation.getArgument(0);
+                String iFileCode = invocation.getArgument(1);
+                String iFileUrl = invocation.getArgument(2);
+                return Optional.of(new FileMetaData(id, iFileCode, iFileUrl,
+                        LocalDateTime.now(), 0, 10, FileState.PENDING));
+            };
+
+            when(fileMetaDataRepository.findByIdAndFileCodeAndFileUrl(any(Long.class), any(String.class), any(String.class)))
+                    .thenAnswer(returnFileData);
+            when(fileMetaDataRepository.save(any(FileMetaData.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            FileMetaData result = s3SharingService.confirmUpload(fileMetaDataId, fileCode, fileUrl);
+
+            verify(fileMetaDataRepository).findByIdAndFileCodeAndFileUrl(any(Long.class), any(String.class), any(String.class));
+            verify(fileMetaDataRepository).save(any(FileMetaData.class));
+
+            assertEquals(FileState.READY, result.getFileState());
         }
 
-        @MethodSource("confirmUploadParams")
-        @ParameterizedTest(name = "fileMetaDataId{0}, fileCode{1}, fileUrl{3}")
-        @DisplayName("Should confirm uploads correctly")
-        void shouldConfirmUpload(long fileMetaDataId, String fileCode, String fileUrl) {
+        @Test
+        @DisplayName("Should throw a FileMetaDataNotFoundException")
+        public void shouldThrowException() {
+            long fileMetaDataId = 0;
+            String fileCode = "abcdef";
+            String fileUrl = "https://aws.com/s3/abcdef";
 
+            when(fileMetaDataRepository.findByIdAndFileCodeAndFileUrl(any(Long.class), any(String.class), any(String.class)))
+                    .thenReturn(Optional.empty());
+
+            assertThrows(FileMetaDataNotFoundException.class,
+                    () -> {
+                        s3SharingService.confirmUpload(fileMetaDataId, fileCode, fileUrl);
+                    });
+
+            verify(fileMetaDataRepository).findByIdAndFileCodeAndFileUrl(any(Long.class), any(String.class), any(String.class));
         }
     }
 }

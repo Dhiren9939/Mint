@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface FileMetaDataRepository extends JpaRepository<FileMetaData,Long> {
     Optional<FileMetaData> findByFileCode(String fileCode);
+    Optional<FileMetaData> findByIdAndFileCodeAndFileUrl(long id,String fileCode,String fileUrl);
 }
