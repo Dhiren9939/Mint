@@ -42,7 +42,7 @@ public class S3SharingService implements FileSharingService {
 
     @Override
     public FileMetaData generateUploadLink(ExpiryDuration duration, int maxDownLoad) {
-        String fileUrl = fileStorageService.generatePreSignedURL();
+        String fileUrl = fileStorageService.generateUploadLink();
         String fileCode = codeGeneratorService.getRandomCode();
         FileMetaData fileMetaData =
                 new FileMetaData(0L, fileCode, fileUrl, this.getExpiresAt(duration), 0, maxDownLoad, FileState.PENDING);

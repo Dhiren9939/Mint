@@ -62,14 +62,14 @@ public class S3SharingServiceTest {
             String mockUrl = "https://mockS3Url.com/";
 
             when(generatorService.getRandomCode()).thenReturn(mockFileCode);
-            when(fileStorageService.generatePreSignedURL()).thenReturn(mockUrl);
+            when(fileStorageService.generateUploadLink()).thenReturn(mockUrl);
             when(fileMetaDataRepository.save(any())).thenAnswer(
                     invocation -> invocation.getArgument(0));
 
             FileMetaData result = s3SharingService.generateUploadLink(expiryDuration, maxDownload);
 
             verify(generatorService).getRandomCode();
-            verify(fileStorageService).generatePreSignedURL();
+            verify(fileStorageService).generateUploadLink();
             verify(fileMetaDataRepository).save(any());
 
             assertNotNull(result);
