@@ -5,7 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface FileMetaDataRepository extends JpaRepository<FileMetaData,Long> {
+public interface FileMetaDataRepository extends JpaRepository<FileMetaData, Long> {
     Optional<FileMetaData> findByFileCode(String fileCode);
-    Optional<FileMetaData> findByIdAndFileCodeAndFileUrl(long id,String fileCode,String fileUrl);
+
+    Optional<FileMetaData> findByFileKeyAndFileCode(String fileKey, String fileCode);
 }

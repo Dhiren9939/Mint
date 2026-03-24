@@ -1,0 +1,11 @@
+<project>
+    <groupId>me.dhiren9939</groupId>
+    <artifactId>root</artifactId>
+    <version>1.0</version>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>frontend</module>
+        <module>backend</module>
+    </modules>
+</project>

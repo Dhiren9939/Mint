@@ -4,6 +4,7 @@ import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
 import me.dhiren9939.mint.model.entity.FileMetaData;
 import me.dhiren9939.mint.model.entity.FileState;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
+import me.dhiren9939.mint.service.s3.S3SharingService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -47,29 +48,29 @@ public class S3SharingServiceTest {
     class GenerateUploadLinkTest {
         public static Stream<Arguments> uploadLinkParams() {
             return Stream.of(
-                    Arguments.of(ExpiryDuration.MINUTES15, 1),
-                    Arguments.of(ExpiryDuration.MINUTES15, 2),
-                    Arguments.of(ExpiryDuration.MINUTES30, 5),
-                    Arguments.of(ExpiryDuration.MINUTES60, 100),
-                    Arguments.of(ExpiryDuration.HOURS24, 0));
+                    Arguments.of(ExpiryDuration.MINUTES15, 1, "file.txt", "text/plain", 100),
+                    Arguments.of(ExpiryDuration.MINUTES15, 2, "file.jpg", "image/jpg", 100),
+                    Arguments.of(ExpiryDuration.MINUTES30, 5, "file.png", "image/png", 100),
+                    Arguments.of(ExpiryDuration.MINUTES60, 100, "file.xyz", "application/octet-stream", 100),
+                    Arguments.of(ExpiryDuration.HOURS24, 1, "file.txt", "text/plain", 100));
         }
 
         @MethodSource("uploadLinkParams")
         @DisplayName("Should Generate Upload Link")
-        @ParameterizedTest(name = "expiry={0}, maxDownload={1}")
-        public void shouldGenerateUploadLink(ExpiryDuration expiryDuration, int maxDownload) {
+        @ParameterizedTest(name = "expiry={0}, maxDownload={1}, fileName={2}, contentType={3}, contentSize={4}")
+        public void shouldGenerateUploadLink(ExpiryDuration expiryDuration, int maxDownload, String fileName, String contentType, int contentSize) {
             String mockFileCode = "mock12";
             String mockUrl = "https://mockS3Url.com/";
 
             when(generatorService.getRandomCode()).thenReturn(mockFileCode);
-            when(fileStorageService.generateUploadLink()).thenReturn(mockUrl);
+            when(fileStorageService.generateUploadLink(any(String.class), any(String.class), any(Integer.class))).thenReturn(mockUrl);
             when(fileMetaDataRepository.save(any())).thenAnswer(
                     invocation -> invocation.getArgument(0));
 
-            FileMetaData result = s3SharingService.generateUploadLink(expiryDuration, maxDownload);
+            FileMetaData result = s3SharingService.generateUploadLink(expiryDuration, maxDownload, fileName, contentType, contentSize);
 
             verify(generatorService).getRandomCode();
-            verify(fileStorageService).generateUploadLink();
+            verify(fileStorageService).generateUploadLink(any(String.class), any(String.class), any(Integer.class));
             verify(fileMetaDataRepository).save(any());
 
             assertNotNull(result);

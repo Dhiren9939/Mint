@@ -22,7 +22,7 @@ public class FileMetaData {
     private String fileCode;
 
     @Column(unique = true, nullable = false)
-    private String fileUrl;
+    private String fileKey;
 
     private LocalDateTime expiresAt;
 
