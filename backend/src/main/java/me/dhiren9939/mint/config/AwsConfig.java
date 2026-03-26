@@ -1,4 +1,4 @@
-package me.dhiren9939.mint;
+package me.dhiren9939.mint.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
