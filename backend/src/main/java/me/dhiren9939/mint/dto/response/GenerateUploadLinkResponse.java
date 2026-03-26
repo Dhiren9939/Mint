@@ -1,8 +1,5 @@
 package me.dhiren9939.mint.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import me.dhiren9939.mint.model.entity.FileMetaData;
 import me.dhiren9939.mint.model.entity.FileState;
 

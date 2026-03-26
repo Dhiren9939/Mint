@@ -1,7 +1,6 @@
 package me.dhiren9939.mint.config;
 
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
-import io.github.bucket4j.distributed.proxy.ClientSideConfig;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
@@ -13,14 +12,8 @@ import io.lettuce.core.codec.StringCodec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.time.Duration;
-
-import static io.github.bucket4j.redis.lettuce.Bucket4jLettuce.casBasedBuilder;
 
 
 @Configuration
