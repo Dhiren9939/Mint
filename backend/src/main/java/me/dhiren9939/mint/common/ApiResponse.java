@@ -8,7 +8,7 @@ public record ApiResponse<T>(
         boolean success,
         String message,
         T data,
-        ApiError error
+        ApiError<?> error
 ) {
     public static <T> ApiResponse<T> of(T data) {
         return new ApiResponse<>(true, null, data, null);
@@ -18,11 +18,17 @@ public record ApiResponse<T>(
         return new ApiResponse<>(true, message, data, null);
     }
 
-    public static <T> ApiResponse<T> fail(ApiError error) {
+    public static <T> ApiResponse<T> fail(ApiError<?> error) {
         return new ApiResponse<>(false, null, null, error);
     }
 
-    public ResponseEntity<ApiResponse<T>> statusCode(int statusCode) {
+    public ResponseEntity<ApiResponse<T>> toResponseEntity() {
+        if (error != null)
+            return ResponseEntity.status(error.status()).body(this);
+        return ResponseEntity.status(200).body(this);
+    }
+
+    public ResponseEntity<ApiResponse<T>> toResponseEntity(int statusCode) {
         return ResponseEntity.status(statusCode).body(this);
     }
 }

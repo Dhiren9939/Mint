@@ -9,8 +9,9 @@ import me.dhiren9939.mint.common.ApiResponse;
 import me.dhiren9939.mint.dto.request.ConfirmUploadRequest;
 import me.dhiren9939.mint.dto.request.GenerateUploadLinkRequest;
 import me.dhiren9939.mint.dto.response.ConfirmUploadResponse;
-import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
 import me.dhiren9939.mint.dto.response.GenerateDownloadLinkResponse;
+import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
+import me.dhiren9939.mint.service.ExpiryDuration;
 import me.dhiren9939.mint.service.FileSharingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -28,20 +29,20 @@ public class FileSharingController {
     public ResponseEntity<ApiResponse<GenerateUploadLinkResponse>>
     handleGenerateUploadLink(@Valid @RequestBody GenerateUploadLinkRequest dto) {
         GenerateUploadLinkResponse uploadLink = fileSharingService.generateUploadLink(
-                dto.getExpiryDuration(),
+                ExpiryDuration.valueOf(dto.getExpiryDuration()),
                 dto.getMaxDownload(),
                 dto.getFileName(),
                 dto.getContentType(),
                 dto.getContentSize()
         );
 
-        return ApiResponse.of(uploadLink).statusCode(201);
+        return ApiResponse.of(uploadLink).toResponseEntity(201);
     }
 
     @PostMapping("/file")
     public ResponseEntity<ApiResponse<ConfirmUploadResponse>> handleConfirmUpload(@Valid @RequestBody ConfirmUploadRequest dto) {
         ConfirmUploadResponse confirmUpload = fileSharingService.confirmUpload(dto.getFileKey(), dto.getFileCode());
-        return ApiResponse.of(confirmUpload).statusCode(200);
+        return ApiResponse.of(confirmUpload).toResponseEntity(200);
     }
 
     @GetMapping("/file/{fileCode}")
@@ -50,8 +51,8 @@ public class FileSharingController {
             @Pattern(regexp = "^[0-9a-z.]{6}$", message = "Must be a valid code.")
             @PathVariable String fileCode) {
 
-        GenerateDownloadLinkResponse downloadLink = fileSharingService.getDownloadLink(fileCode);
+        GenerateDownloadLinkResponse downloadLink = fileSharingService.generateDownloadLink(fileCode);
 
-        return ApiResponse.of(downloadLink).statusCode(200);
+        return ApiResponse.of(downloadLink).toResponseEntity(200);
     }
 }

@@ -33,7 +33,7 @@ public class S3FileStorageService implements FileStorageService {
                                 .key(key)
                                 .contentType(contentType)
                                 .contentLength((long) contentSize).build())
-                        .signatureDuration(Duration.ofMinutes(5))
+                        .signatureDuration(Duration.ofMinutes(1))
                         .build());
 
         return putObjectRequest.url().toString();
@@ -44,7 +44,7 @@ public class S3FileStorageService implements FileStorageService {
                 .getObjectRequest(p -> p
                         .bucket(bucketName)
                         .key(key))
-                .signatureDuration(Duration.ofMinutes(5)).build());
+                .signatureDuration(Duration.ofMinutes(1)).build());
 
         return getObjectRequest.url().toString();
     }

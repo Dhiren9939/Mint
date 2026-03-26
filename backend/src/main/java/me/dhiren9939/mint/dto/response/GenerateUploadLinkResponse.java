@@ -19,7 +19,7 @@ public record GenerateUploadLinkResponse(
                 fileUrl,
                 fileMetaData.getFileCode(),
                 fileMetaData.getFileKey(),
-                fileMetaData.getExpiresAt(),
+                fileMetaData.getCleanAt(),
                 fileMetaData.getMaxDownloadCount(),
                 fileMetaData.getFileState()
         );

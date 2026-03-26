@@ -1,8 +1,8 @@
 package me.dhiren9939.mint.service;
 
 import me.dhiren9939.mint.dto.response.ConfirmUploadResponse;
-import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
 import me.dhiren9939.mint.dto.response.GenerateDownloadLinkResponse;
+import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
 import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
 
 public interface FileSharingService {
@@ -10,5 +10,5 @@ public interface FileSharingService {
 
     ConfirmUploadResponse confirmUpload(String key, String fileCode) throws FileMetaDataNotFoundException;
 
-    GenerateDownloadLinkResponse getDownloadLink(String fileCode);
+    GenerateDownloadLinkResponse generateDownloadLink(String fileCode);
 }

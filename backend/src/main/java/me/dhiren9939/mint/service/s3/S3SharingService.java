@@ -3,10 +3,11 @@ package me.dhiren9939.mint.service.s3;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.dto.response.ConfirmUploadResponse;
-import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
 import me.dhiren9939.mint.dto.response.GenerateDownloadLinkResponse;
+import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
 import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
 import me.dhiren9939.mint.model.entity.FileMetaData;
+import me.dhiren9939.mint.model.entity.FileMetaDataBuilder;
 import me.dhiren9939.mint.model.entity.FileState;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import me.dhiren9939.mint.service.CodeGeneratorService;
@@ -56,9 +57,15 @@ public class S3SharingService implements FileSharingService {
         String fileUrl = fileStorageService.generateUploadLink(key, contentType, contentSize);
         String fileCode = codeGeneratorService.getRandomCode();
 
-        FileMetaData fileMetaData =
-                new FileMetaData(0L, fileCode, key, this.getExpiresAt(duration), 0, maxDownLoad, FileState.PENDING);
-        fileMetaDataRepository.save(fileMetaData);
+        FileMetaData fileMetaData = FileMetaDataBuilder.builder()
+                .fileCode(fileCode)
+                .cleanAt(LocalDateTime.now().plusMinutes(1))
+                .maxDownloadCount(maxDownLoad)
+                .fileState(FileState.PENDING)
+                .fileExpiryDuration(duration)
+                .build();
+
+        fileMetaData = fileMetaDataRepository.save(fileMetaData);
 
         return GenerateUploadLinkResponse.of(fileUrl, fileMetaData);
     }
@@ -76,7 +83,7 @@ public class S3SharingService implements FileSharingService {
     }
 
     @Override
-    public GenerateDownloadLinkResponse getDownloadLink(String fileCode) throws FileMetaDataNotFoundException {
+    public GenerateDownloadLinkResponse generateDownloadLink(String fileCode) throws FileMetaDataNotFoundException {
         Optional<FileMetaData> optionalMetaData = fileMetaDataRepository.findByFileCode(fileCode);
         if (optionalMetaData.isEmpty())
             throw new FileMetaDataNotFoundException();
@@ -86,13 +93,13 @@ public class S3SharingService implements FileSharingService {
         // Check states
         FileState fileState = fileMetaData.getFileState();
         if (fileState == FileState.PENDING)
-            throw new FileMetaDataNotFoundException("File not uploaded. File cannot be send.");
+            throw new FileMetaDataNotFoundException("File not uploaded. File url cannot be generated.");
         if (fileState == FileState.DELETED)
             throw new FileMetaDataNotFoundException();
 
         // Check downloadCount and expiresAt
         int fileDownLoadCount = fileMetaData.getDownloadCount();
-        LocalDateTime fileExpiresAt = fileMetaData.getExpiresAt();
+        LocalDateTime fileExpiresAt = fileMetaData.getCleanAt();
         if (LocalDateTime.now().isAfter(fileExpiresAt) || fileDownLoadCount >= fileMetaData.getMaxDownloadCount()) {
             // Mark Deleted.
             fileMetaData.setFileState(FileState.DELETED);

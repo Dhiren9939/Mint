@@ -14,7 +14,7 @@ public record ConfirmUploadResponse(
     public static ConfirmUploadResponse of(FileMetaData fileMetaData) {
         return new ConfirmUploadResponse(
                 fileMetaData.getFileCode(),
-                fileMetaData.getExpiresAt(),
+                fileMetaData.getCleanAt(),
                 fileMetaData.getMaxDownloadCount(),
                 fileMetaData.getFileState()
         );

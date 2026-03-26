@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import me.dhiren9939.mint.service.ExpiryDuration;
 
 import java.time.LocalDateTime;
 
@@ -24,11 +25,14 @@ public class FileMetaData {
     @Column(unique = true, nullable = false)
     private String fileKey;
 
-    private LocalDateTime expiresAt;
+    private LocalDateTime cleanAt;
 
     private int downloadCount;
     private int maxDownloadCount = 100;
 
     @Enumerated(EnumType.STRING)
     private FileState fileState = FileState.PENDING;
+
+    @Enumerated(EnumType.STRING)
+    private ExpiryDuration fileExpiryDuration;
 }

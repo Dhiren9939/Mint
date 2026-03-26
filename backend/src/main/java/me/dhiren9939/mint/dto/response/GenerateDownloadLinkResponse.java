@@ -13,7 +13,7 @@ public record GenerateDownloadLinkResponse(
     public static GenerateDownloadLinkResponse of(String fileUrl, FileMetaData fileMetaData){
         return new GenerateDownloadLinkResponse(
                 fileUrl,
-                fileMetaData.getExpiresAt(),
+                fileMetaData.getCleanAt(),
                 fileMetaData.getDownloadCount(),
                 fileMetaData.getMaxDownloadCount()
         );

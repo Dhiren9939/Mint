@@ -1,18 +1,21 @@
 package me.dhiren9939.mint.common;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.Map;
 
-public record ApiError(
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record ApiError<T>(
         int status,
         String code,
         String message,
-        Map<String, String> fields
+        Map<String, T> fields
 ) {
-    public static ApiError of(int status, String code, String message) {
-        return new ApiError(status, code, message, null);
+    public static <T> ApiError<T> of(int status, String code, String message) {
+        return new ApiError<>(status, code, message, null);
     }
 
-    public static ApiError ofFields(int status, String code, String message, Map<String, String> fields) {
-        return new ApiError(status, code, message, fields);
+    public static <T> ApiError<T> ofFields(int status, String code, String message, Map<String, T> fields) {
+        return new ApiError<>(status, code, message, fields);
     }
 }
