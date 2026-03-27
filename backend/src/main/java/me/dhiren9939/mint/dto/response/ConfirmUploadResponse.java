@@ -1,7 +1,7 @@
 package me.dhiren9939.mint.dto.response;
 
-import me.dhiren9939.mint.model.entity.FileMetaData;
-import me.dhiren9939.mint.model.entity.FileState;
+import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
+import me.dhiren9939.mint.model.entity.metadata.FileState;
 
 import java.time.LocalDateTime;
 

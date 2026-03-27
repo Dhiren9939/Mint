@@ -37,9 +37,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     Integer globalPostCapacity;
 
     // Per Minute
-    @Value("${mint.cap.ip.get:2}")
+    @Value("${mint.cap.ip.get:20}")
     Integer ipGetCapacity;
-    @Value("${mint.cap.ip.post:20}")
+    @Value("${mint.cap.ip.post:5}")
     Integer ipPostCapacity;
 
     // Per Day

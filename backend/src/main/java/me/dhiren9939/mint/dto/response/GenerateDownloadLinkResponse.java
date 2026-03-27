@@ -1,6 +1,6 @@
 package me.dhiren9939.mint.dto.response;
 
-import me.dhiren9939.mint.model.entity.FileMetaData;
+import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
 
 import java.time.LocalDateTime;
 

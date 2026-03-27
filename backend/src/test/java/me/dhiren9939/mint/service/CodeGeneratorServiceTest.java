@@ -2,7 +2,7 @@ package me.dhiren9939.mint.service;
 
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.exception.FileCodeGenerationFailure;
-import me.dhiren9939.mint.model.entity.FileMetaData;
+import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

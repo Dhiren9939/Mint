@@ -5,16 +5,18 @@ import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.dto.response.ConfirmUploadResponse;
 import me.dhiren9939.mint.dto.response.GenerateDownloadLinkResponse;
 import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
+import me.dhiren9939.mint.exception.FileCodeGenerationFailure;
 import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
-import me.dhiren9939.mint.model.entity.FileMetaData;
-import me.dhiren9939.mint.model.entity.FileMetaDataBuilder;
-import me.dhiren9939.mint.model.entity.FileState;
+import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
+import me.dhiren9939.mint.model.entity.metadata.FileMetaDataBuilder;
+import me.dhiren9939.mint.model.entity.metadata.FileState;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import me.dhiren9939.mint.service.CodeGeneratorService;
 import me.dhiren9939.mint.service.ExpiryDuration;
 import me.dhiren9939.mint.service.FileSharingService;
 import me.dhiren9939.mint.service.FileStorageService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -22,6 +24,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@Transactional(noRollbackFor = FileMetaDataNotFoundException.class)
 @AllArgsConstructor
 public class S3SharingService implements FileSharingService {
     private final FileStorageService fileStorageService;
@@ -44,13 +47,13 @@ public class S3SharingService implements FileSharingService {
                 return now.plusHours(24);
             }
             default -> {
-                return now;
+                throw new IllegalArgumentException("Parameter \"duration\" must be a part of enum ExpiryDuration.");
             }
         }
     }
 
     @Override
-    public GenerateUploadLinkResponse generateUploadLink(ExpiryDuration duration, int maxDownLoad, String fileName, String contentType, int contentSize) {
+    public GenerateUploadLinkResponse generateUploadLink(ExpiryDuration duration, int maxDownLoad, String fileName, String contentType, int contentSize) throws FileCodeGenerationFailure {
         String extension = fileName.substring(fileName.lastIndexOf("."));
         String key = "uploads/" + UUID.randomUUID() + extension;
 
@@ -63,6 +66,7 @@ public class S3SharingService implements FileSharingService {
                 .maxDownloadCount(maxDownLoad)
                 .fileState(FileState.PENDING)
                 .fileExpiryDuration(duration)
+                .fileKey(key)
                 .build();
 
         fileMetaData = fileMetaDataRepository.save(fileMetaData);
@@ -77,14 +81,18 @@ public class S3SharingService implements FileSharingService {
             throw new FileMetaDataNotFoundException("Invalid metadata information. File not Found.");
 
         FileMetaData metaData = optionalFileMetaData.get();
+        LocalDateTime expiresAt = this.getExpiresAt(metaData.getFileExpiryDuration());
+
         metaData.setFileState(FileState.READY);
-        fileMetaDataRepository.save(metaData);
+        metaData.setCleanAt(expiresAt);
+
+        metaData = fileMetaDataRepository.save(metaData);
         return ConfirmUploadResponse.of(metaData);
     }
 
     @Override
     public GenerateDownloadLinkResponse generateDownloadLink(String fileCode) throws FileMetaDataNotFoundException {
-        Optional<FileMetaData> optionalMetaData = fileMetaDataRepository.findByFileCode(fileCode);
+        Optional<FileMetaData> optionalMetaData = fileMetaDataRepository.findByFileCodeWithLock(fileCode);
         if (optionalMetaData.isEmpty())
             throw new FileMetaDataNotFoundException();
 
@@ -97,7 +105,7 @@ public class S3SharingService implements FileSharingService {
         if (fileState == FileState.DELETED)
             throw new FileMetaDataNotFoundException();
 
-        // Check downloadCount and expiresAt
+        // Check downloadCount and cleanAt
         int fileDownLoadCount = fileMetaData.getDownloadCount();
         LocalDateTime fileExpiresAt = fileMetaData.getCleanAt();
         if (LocalDateTime.now().isAfter(fileExpiresAt) || fileDownLoadCount >= fileMetaData.getMaxDownloadCount()) {

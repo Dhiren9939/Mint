@@ -1,4 +1,4 @@
-package me.dhiren9939.mint.model.entity;
+package me.dhiren9939.mint.model.entity.metadata;
 
 import me.dhiren9939.mint.service.ExpiryDuration;
 
