@@ -5,5 +5,5 @@ public interface FileStorageService {
 
     String generateDownloadLink(String key);
 
-    void deleteFile(String fileUrl);
+    void deleteFile(String fileKey);
 }

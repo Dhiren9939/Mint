@@ -24,8 +24,8 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@Transactional(noRollbackFor = FileMetaDataNotFoundException.class)
 @AllArgsConstructor
+@Transactional(noRollbackFor = FileMetaDataNotFoundException.class)
 public class S3SharingService implements FileSharingService {
     private final FileStorageService fileStorageService;
     private final FileMetaDataRepository fileMetaDataRepository;
@@ -81,6 +81,12 @@ public class S3SharingService implements FileSharingService {
             throw new FileMetaDataNotFoundException("Invalid metadata information. File not Found.");
 
         FileMetaData metaData = optionalFileMetaData.get();
+        if (metaData.getCleanAt().isBefore(LocalDateTime.now())) {
+            metaData.setFileState(FileState.DELETED);
+            fileMetaDataRepository.save(metaData);
+            throw new FileMetaDataNotFoundException();
+        }
+
         LocalDateTime expiresAt = this.getExpiresAt(metaData.getFileExpiryDuration());
 
         metaData.setFileState(FileState.READY);

@@ -1,8 +1,8 @@
 package me.dhiren9939.mint.service;
 
 import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
-import me.dhiren9939.mint.model.entity.FileMetaData;
-import me.dhiren9939.mint.model.entity.FileState;
+import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
+import me.dhiren9939.mint.model.entity.metadata.FileState;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import me.dhiren9939.mint.service.s3.S3SharingService;
 import org.junit.jupiter.api.DisplayName;

@@ -32,24 +32,24 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     // Per Month
     @Value("${mint.cap.global.get:5000}")
-    Integer globalGetCapacity;
+    private Integer globalGetCapacity;
     @Value("${mint.cap.global.post:1000}")
-    Integer globalPostCapacity;
+    private Integer globalPostCapacity;
 
     // Per Minute
     @Value("${mint.cap.ip.get:20}")
-    Integer ipGetCapacity;
+    private Integer ipGetCapacity;
     @Value("${mint.cap.ip.post:5}")
-    Integer ipPostCapacity;
+    private Integer ipPostCapacity;
 
     // Per Day
     @Value("${mint.cap.user.get:20}")
-    Integer userGetCapacity;
+    private Integer userGetCapacity;
     @Value("${mint.cap.user.post:10}")
-    Integer userPostCapacity;
+    private Integer userPostCapacity;
 
     @Value("${spring.profiles.active:dev}")
-    String profile;
+    private String profile;
 
     private final ProxyManager<String> proxyManager;
     private final ObjectMapper objectMapper;

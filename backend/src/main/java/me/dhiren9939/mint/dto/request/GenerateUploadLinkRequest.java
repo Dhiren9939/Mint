@@ -9,12 +9,12 @@ import me.dhiren9939.mint.common.EnumValue;
 import me.dhiren9939.mint.service.ExpiryDuration;
 import org.hibernate.validator.constraints.Length;
 
-@NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class GenerateUploadLinkRequest {
-    private static final int maxContentSize = 100 * 1024;
+    private static final int maxContentSize = 1024 * 1024;
 
     @NotNull(message = "Expiry duration is required.")
     @EnumValue(enumClass = ExpiryDuration.class)

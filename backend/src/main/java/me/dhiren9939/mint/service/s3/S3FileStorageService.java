@@ -49,7 +49,7 @@ public class S3FileStorageService implements FileStorageService {
         return getObjectRequest.url().toString();
     }
 
-    public void deleteFile(String fileUrl) {
+    public void deleteFile(String fileKey) {
 
     }
 }
