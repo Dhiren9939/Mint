@@ -3,7 +3,6 @@ package me.dhiren9939.mint.config;
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
-import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.codec.ByteArrayCodec;
@@ -37,14 +36,10 @@ public class RateLimitConfig {
 
     @Bean
     public ProxyManager<String> proxyManager(StatefulRedisConnection<String,byte[]> connection){
-        LettuceBasedProxyManager<String> proxyManager = Bucket4jLettuce
+        return Bucket4jLettuce
                 .casBasedBuilder(connection)
                 .expirationAfterWrite(ExpirationAfterWriteStrategy
                         .basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(1)))
                 .build();
-
-        return proxyManager;
     }
-
-
 }
