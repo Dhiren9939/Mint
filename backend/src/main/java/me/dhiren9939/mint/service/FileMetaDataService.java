@@ -23,7 +23,7 @@ public class FileMetaDataService {
     public FileMetaData createPending(String fileKey, String fileCode, ExpiryDuration duration, int maxDownload) {
         FileMetaData fileMetaData = FileMetaDataBuilder.builder()
                 .fileCode(fileCode)
-                .cleanAt(LocalDateTime.now().plusMinutes(1))
+                .cleanAt(LocalDateTime.now().plusMinutes(5))
                 .maxDownloadCount(maxDownload)
                 .fileState(FileState.PENDING)
                 .fileExpiryDuration(duration)

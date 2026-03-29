@@ -50,6 +50,6 @@ public class S3FileStorageService implements FileStorageService {
     }
 
     public void deleteFile(String fileKey) {
-
+        s3Client.deleteObject(r -> r.bucket(bucketName).key(fileKey).build());
     }
 }
