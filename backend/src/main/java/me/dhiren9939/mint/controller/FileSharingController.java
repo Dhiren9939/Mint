@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RestController
 @AllArgsConstructor
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @Tag(name = "File Controller", description = "Endpoints for uploading and accessing files.")
 public class FileSharingController {
     private final FileSharingService fileSharingService;
