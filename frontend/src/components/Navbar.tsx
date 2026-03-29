@@ -1,14 +1,32 @@
-import React from "react";
+import { Info } from "lucide-react";
 import logo from "../assets/logo.svg";
 
-function Navbar() {
+interface NavbarProps {
+  onAboutClick: () => void;
+}
+
+function Navbar({ onAboutClick }: NavbarProps) {
   return (
-    <div className="flex w-full font-['Manrope'] justify-between px-4 py-4">
+    <nav className="flex w-full font-['Manrope'] justify-between items-center px-5 py-4 animate-slide-down">
       <a href="/" className="group flex items-center gap-2 no-underline">
-        <img src={logo} className="h-7" />
-        <span className="text-3xl text-emerald-500 font-bold">Mint</span>
+        <img
+          src={logo}
+          className="h-7 transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-110"
+          alt="Mint logo"
+        />
+        <span className="text-3xl text-emerald-500 font-bold tracking-tight">
+          Mint
+        </span>
       </a>
-    </div>
+
+      <button
+        onClick={onAboutClick}
+        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-all duration-300 cursor-pointer"
+      >
+        <Info size={16} />
+        <span>About</span>
+      </button>
+    </nav>
   );
 }
 

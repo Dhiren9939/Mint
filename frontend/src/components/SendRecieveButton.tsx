@@ -3,43 +3,31 @@ interface SendReceiveButtonProps {
   setIsSend: (value: boolean) => void;
 }
 
-interface ButtonProps {
-  handleClick: () => void;
-  isSend: boolean;
-  currState: boolean;
-}
-
-function Button({ handleClick, isSend, currState }: ButtonProps) {
-  const active = isSend === currState;
-
-  return (
-    <button
-      onClick={handleClick}
-      className={`${active ? "bg-emerald-500 text-slate-800 shadow-2xl" : "text-slate-400 py-2"} font-medium text-center w-full rounded-2xl transition-colors duration-300 ease-in-out`}
-    >
-      {isSend ? "Send" : "Recieve"}
-    </button>
-  );
-}
-
 function SendRecieveButton({ isSend, setIsSend }: SendReceiveButtonProps) {
   return (
     <div className="text-xl py-6 flex flex-col items-center">
-      <div className="w-full min-w-72 sm:w-fit flex justify-center gap-2 bg-slate-800 p-2 rounded-2xl border border-slate-700 shadow-2xs">
-        <Button
-          isSend={true}
-          currState={isSend}
-          handleClick={() => {
-            setIsSend(true);
-          }}
+      <div className="relative flex w-full max-w-[300px] bg-slate-800/80 backdrop-blur p-2 rounded-2xl border border-slate-700 shadow-2xs">
+        <div
+          className="absolute top-2 bottom-2 w-[calc(50%-8px)] bg-emerald-500 rounded-xl transition-transform duration-300 ease-in-out shadow-lg"
+          style={{ transform: isSend ? "translateX(0)" : "translateX(100%)" }}
         />
-        <Button
-          isSend={false}
-          currState={isSend}
-          handleClick={() => {
-            setIsSend(false);
-          }}
-        />
+
+        <button
+          onClick={() => setIsSend(true)}
+          className={`relative z-10 w-1/2 py-2 font-medium text-center transition-colors duration-300 rounded-xl cursor-pointer ${
+            isSend ? "text-slate-800" : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Send
+        </button>
+        <button
+          onClick={() => setIsSend(false)}
+          className={`relative z-10 w-1/2 py-2 font-medium text-center transition-colors duration-300 rounded-xl cursor-pointer ${
+            !isSend ? "text-slate-800" : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Recieve
+        </button>
       </div>
     </div>
   );

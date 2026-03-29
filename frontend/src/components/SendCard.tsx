@@ -1,11 +1,12 @@
-import React, { useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import {
   Clock,
   DownloadCloud,
-  File,
+  File as FileIcon,
   Upload,
   Pencil,
   ChevronLeft,
+  CornerDownLeft,
 } from "lucide-react";
 import GlassCard from "./GlassCard";
 import Dropzone from "react-dropzone";
@@ -26,7 +27,11 @@ function ExpiryOption({
   return (
     <button
       onClick={() => handleOptionClick(index)}
-      className={`${activeIndex == index ? "bg-emerald-500 text-slate-800" : "bg-slate-700/10"} p-2 w-14 text-center rounded-md cursor-pointer transition-colors duration-200 ease-in-out`}
+      className={`${
+        activeIndex === index
+          ? "bg-emerald-500 text-slate-800 shadow-md scale-105"
+          : "bg-slate-700/30 text-slate-300 hover:bg-slate-700/60 hover:text-emerald-400"
+      } p-2 w-14 text-center rounded-md cursor-pointer transition-all duration-200 ease-in-out`}
     >
       {duration}
     </button>
@@ -40,6 +45,15 @@ function SendContent() {
 
   const [isTextMode, setIsTextMode] = useState(false);
   const [textContent, setTextContent] = useState("");
+
+  function convertTextToFile() {
+    if (!textContent.trim()) return;
+    const blob = new Blob([textContent], { type: "text/plain" });
+    const newFile = new File([blob], "text-snippet.txt", { type: "text/plain" });
+    setFile(newFile);
+    setTextContent("");
+    setIsTextMode(false);
+  }
 
   function handleSlider(e: ChangeEvent<HTMLInputElement>) {
     setDownloadCount(Number(e.target.value));
@@ -61,7 +75,7 @@ function SendContent() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <div className="flex flex-col gap-4 items-center justify-center text-slate-300">
         <div className="w-full max-w-2xl">
           {isTextMode ? (
@@ -84,7 +98,24 @@ function SendContent() {
                 placeholder="Type or paste your content here..."
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    convertTextToFile();
+                  }
+                }}
               />
+              
+              <div className="flex justify-end pt-2 border-t border-slate-700/50 mt-auto">
+                <button
+                  onClick={convertTextToFile}
+                  disabled={!textContent.trim()}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50 disabled:hover:bg-emerald-500/10 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
+                >
+                  <CornerDownLeft size={16} />
+                  Enter
+                </button>
+              </div>
             </div>
           ) : (
             <Dropzone
@@ -95,7 +126,11 @@ function SendContent() {
                 <div
                   {...getRootProps()}
                   className={`flex flex-col gap-2 items-center border-2 border-dashed text-center px-4 py-16 rounded-2xl w-full transition-all duration-300 cursor-pointer group
-                    ${isDragActive ? "border-emerald-500 bg-emerald-500/5 scale-[1.01]" : "border-slate-700 bg-transparent hover:border-slate-500"}`}
+                    ${
+                      isDragActive
+                        ? "border-emerald-500 bg-emerald-500/10 scale-[1.02] shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+                        : "border-slate-700 bg-slate-800/40 hover:border-emerald-500/50 hover:bg-slate-800/60"
+                    }`}
                 >
                   <input {...getInputProps()} />
 
@@ -104,7 +139,7 @@ function SendContent() {
                     ${isDragActive ? "scale-110 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "group-hover:scale-110"}`}
                   >
                     {file ? (
-                      <File stroke="#10b981" />
+                      <FileIcon stroke="#10b981" />
                     ) : (
                       <Upload stroke="#10b981" />
                     )}
@@ -145,9 +180,21 @@ function SendContent() {
                       </button>
                     </div>
                   ) : (
-                    <h3 className="text-slate-400">
-                      File Size: {Math.ceil(file.size / 1024)} KB
-                    </h3>
+                    <div className="flex flex-col items-center gap-3">
+                      <h3 className="text-slate-400">
+                        File Size: {Math.ceil(file.size / 1024)} KB
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFile(undefined);
+                        }}
+                        className="text-rose-400 text-sm hover:text-rose-300 hover:underline font-medium transition-colors"
+                      >
+                        Clear file
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -209,7 +256,7 @@ function SendContent() {
                     onChange={handleSlider}
                   ></input>
                   <input
-                    className="focus:outline-none bg-slate-700/30 p-2 w-12 text-center rounded-md text-emerald-400"
+                    className="focus:outline-none bg-slate-700/30 hover:bg-slate-700/50 focus:bg-slate-700/70 p-2 w-12 text-center rounded-md text-emerald-400 transition-colors duration-200"
                     type="numeric"
                     value={downloadCount}
                     onChange={handleInputChange}
@@ -221,11 +268,11 @@ function SendContent() {
 
             <div className="w-full flex justify-center">
               <button
-                disabled={!file && !textContent}
-                className="w-full font-semibold rounded-lg flex justify-center gap-2 text-slate-800 bg-emerald-500 py-5 mt-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                disabled={!file}
+                className="w-full font-semibold rounded-lg flex justify-center gap-2 text-slate-900 bg-emerald-500 py-5 mt-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-[0.98]"
               >
                 <Upload />
-                {isTextMode ? "Generate Text Link" : "Upload files"}
+                Upload File
               </button>
             </div>
           </GlassCard>

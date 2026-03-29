@@ -1,21 +1,24 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Navbar from "./components/Navbar";
-import SendReceiveButton from "./components/SendRecieveButton";
-import RecieveCard from "./components/RecieveCard";
-import SendCard from "./components/SendContent";
+import Home from "./components/Home";
+import About from "./components/About";
+import Footer from "./components/Footer";
 
 function App() {
-  const [isSend, setIsSend] = useState(true);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   return (
-    <div>
-      <Navbar />
-      <div className="px-6 font-['Inter']">
-        <SendReceiveButton isSend={isSend} setIsSend={setIsSend} />
-        {isSend ? <SendCard /> : <RecieveCard />}
+    <div className="min-h-screen font-['Inter'] flex flex-col">
+      <div className="ambient-bg" />
+      <Navbar onAboutClick={() => setAboutOpen(true)} />
+      <div className="px-6 pb-12 flex-1">
+        <Home />
       </div>
+      <Footer />
+      <About isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 }
 
 export default App;
+
