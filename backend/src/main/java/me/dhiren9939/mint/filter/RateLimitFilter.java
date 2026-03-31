@@ -9,6 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.common.ApiError;
 import me.dhiren9939.mint.common.ApiResponse;
@@ -16,10 +17,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
@@ -27,6 +31,7 @@ import java.util.UUID;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -53,16 +58,24 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final ProxyManager<String> proxyManager;
     private final ObjectMapper objectMapper;
-
-    public RateLimitFilter(ProxyManager<String> proxyManager, ObjectMapper objectMapper) {
-        this.proxyManager = proxyManager;
-        this.objectMapper = objectMapper;
-    }
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Override
     public void doFilterInternal(HttpServletRequest request,
                                  HttpServletResponse response,
                                  FilterChain filterChain) throws ServletException, IOException {
+
+        // Add Access-Control headers according to CORS config
+        CorsConfiguration corsConfig = corsConfigurationSource.getCorsConfiguration(request);
+        if (corsConfig != null) {
+            String origin = request.getHeader("Origin");
+            if (origin != null && corsConfig.checkOrigin(origin) != null) {
+                response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+                response.setHeader("Access-Control-Allow-Origin", origin);
+                response.setHeader("Access-Control-Allow-Credentials",
+                        String.valueOf(Boolean.TRUE.equals(corsConfig.getAllowCredentials())));
+            }
+        }
 
         String method = request.getMethod().toUpperCase();
         boolean isGet = method.equals("GET");
@@ -70,7 +83,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String ip = request.getRemoteAddr();
         String userId = getOrSetCookie(request, response);
 
-        String globalKey = keyBuilder("GLOBAL",method,"");
+        String globalKey = keyBuilder("GLOBAL", method, "");
         String ipKey = keyBuilder("IP", method, ip);
         String userKey = keyBuilder("USER", method, userId);
 
@@ -122,12 +135,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private void rejectRequest(HttpServletResponse response, String limitedBy) throws IOException {
-        ApiError error = ApiError.of(429, "RATE_LIMIT_EXCEEDED", limitedBy + " rate limit exceeded.");
+        ApiError<Object> error = ApiError.of(429, "RATE_LIMIT_EXCEEDED", limitedBy + " rate limit exceeded.");
         ApiResponse<?> apiResponse = ApiResponse.fail(error);
-        response.setStatus(429);
+        String json = objectMapper.writeValueAsString(apiResponse);
 
+        response.setStatus(429);
         response.setContentType("application/json");
-        response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+        response.setCharacterEncoding("UTF-8");
+
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+        response.setContentLength(bytes.length);
+
+        response.getOutputStream().write(bytes);
+        response.getOutputStream().flush();
     }
 
     private String getOrSetCookie(HttpServletRequest request, HttpServletResponse response) {

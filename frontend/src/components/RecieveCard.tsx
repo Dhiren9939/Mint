@@ -1,18 +1,62 @@
-import { useState } from "react";
+import { useState, type SubmitEvent } from "react";
 import { Download } from "lucide-react";
 import GlassCard from "./GlassCard";
-import ErrorBanner from "./ErrorBanner";
+import toast from "react-hot-toast";
+import getDownloadLink, {
+  type GetDownloadLinkResponse,
+} from "../api/getDownloadLink";
+import { AxiosError } from "axios";
+import type { ApiResponse } from "../api";
 
 function RecieveCard() {
   const [fileCode, setFileCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
+
+  async function handleDownload(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!/^[0-9a-z.]{6}/.test(fileCode)) {
+      toast.error("Enter a valid file code.");
+      return;
+    }
+
+    const toastId = toast.loading("Downloading file...");
+    try {
+      const downloadLinkRes = await getDownloadLink(fileCode);
+      if (!downloadLinkRes.data.data) throw new Error("Download failed.");
+
+      const downloadURL = downloadLinkRes.data.data.fileUrl;
+      window.open(downloadURL);
+
+      toast.success("File downloaded.", { id: toastId });
+    } catch (error) {
+      if (!(error instanceof AxiosError) || !error.response) {
+        toast.error(
+          error instanceof Error ? error.message : "Download failed.",
+          { id: toastId },
+        );
+        return;
+      }
+
+      const errorCode = error.response.data?.error?.code;
+
+      switch (errorCode) {
+        case "RATE_LIMIT_EXCEEDED":
+          toast.error("Too may requests.", { id: toastId });
+          break;
+        case "INVALID_FILE_CODE":
+          toast.error("File not found.", { id: toastId });
+          break;
+        case undefined:
+          toast.error("Download failed.", { id: toastId });
+      }
+    }
+  }
 
   return (
     <div className="flex justify-center animate-fade-in-up stagger-2">
       <div className="max-w-lg w-full flex flex-col gap-4">
-        <ErrorBanner error={error} />
         <GlassCard>
-          <form>
+          <form onSubmit={handleDownload}>
             <div className="flex flex-col gap-2">
               <div className="text-md text-slate-300/80 font-medium">
                 <label htmlFor="fileCode">RETRIEVAL KEY</label>

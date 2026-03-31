@@ -7,7 +7,6 @@ import {
   Pencil,
   ChevronLeft,
   CornerDownLeft,
-  CheckCircle,
   Copy,
 } from "lucide-react";
 import GlassCard from "./GlassCard";
@@ -17,6 +16,8 @@ import getUploadLink from "../api/getUploadLink";
 import toast from "react-hot-toast";
 import uploadFile from "../api/uploadFile";
 import confirmUpload from "../api/confirmUpload";
+import { AxiosError } from "axios";
+import { type ApiResponse } from "../api";
 
 interface ExpiryOptionProps {
   duration: string;
@@ -141,7 +142,7 @@ function SendContent() {
         expiryDuration,
         maxDownload,
       );
-      if (!uploadLinkRes.data.data) throw new Error("Upload failed.");
+      if (!uploadLinkRes.data.data) throw new Error("Failed to upload file.");
 
       const {
         fileKey,
@@ -152,43 +153,35 @@ function SendContent() {
       await uploadFile(file, fileUrl);
 
       const confirmUploadRes = await confirmUpload(fileKey, newFileCode);
-      if (!confirmUploadRes.data.data) throw new Error("Upload failed.");
+      if (!confirmUploadRes.data.data) throw new Error("Failed to upload file.");
 
       setFileCode(newFileCode);
 
-      toast.custom(
-        (t) => (
-          <div
-            className={`transition-all duration-300 transform origin-top ${
-              t.visible
-                ? "opacity-100 translate-y-0 scale-100"
-                : "opacity-0 -translate-y-4 scale-95"
-            } max-w-sm w-full bg-slate-800 border border-emerald-500 shadow-lg rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
-          >
-            <div className="flex-1 flex items-center p-4">
-              <div className="shrink-0">
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-emerald-400">
-                  Upload Successful
-                </p>
-              </div>
-            </div>
-            <div className="flex border-l border-slate-700">
-              <button
-                onClick={() => toast.dismiss(t.id)}
-                className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        ),
-        { id: toastId, duration: 4000 },
-      );
-    } catch {
-      toast.error("Failed to upload file.", { id: toastId, duration: 4000 });
+      toast.success("Upload successful.", { id: toastId });
+    } catch (error) {
+      if (!(error instanceof AxiosError) || !error.response) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to upload file.",
+          { id: toastId },
+        );
+        return;
+      }
+
+      const errorCode = error.response.data?.error?.code;
+
+      switch (errorCode) {
+        case "RATE_LIMIT_EXCEEDED":
+          toast.error("Too may requests.", { id: toastId });
+          break;
+        case "INVALID_FILE_CODE":
+          toast.error("File not found.", { id: toastId });
+          break;
+        case "THIS_SHOULD_HAVE_BEEN_IMPOSSIBLE":
+          toast.error("Could not generate file code. HOW????");
+          break;
+        case undefined:
+          toast.error("Failed to upload file.", { id: toastId });
+      }
     }
   }
 
