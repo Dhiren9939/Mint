@@ -6,8 +6,11 @@ interface GlassCardProps {
 
 function GlassCard({ children }: GlassCardProps) {
   return (
-    <div className="border border-slate-700 rounded-2xl bg-linear-to-tr from-slate-700/30 to-emerald-300/10 shadow-2xs">
-      <div className="rounded-2xl backdrop-blur-2xl py-8 px-8">{children}</div>
+    <div className="relative overflow-hidden rounded-2xl border border-slate-700/80 bg-linear-to-tr from-slate-800/70 via-slate-800/45 to-emerald-500/8 shadow-xl">
+      <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/3 via-transparent to-transparent" />
+      <div className="relative rounded-2xl px-5 py-6 backdrop-blur-2xl sm:px-7 sm:py-7">
+        {children}
+      </div>
     </div>
   );
 }
