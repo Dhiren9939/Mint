@@ -23,11 +23,11 @@ public class ConfirmUploadRequest {
             description = "The unique S3 object key returned during the upload link generation process.",
             example = "a1b2c3d4-e5f6-7890-abcd-1234567890ab.jpg",
             minLength = 36,
-            maxLength = 50,
+            maxLength = 70,
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotNull(message = "File key is required.")
-    @Length(min = 36, max = 50, message = "File key must be 36-50 characters long.")
+    @Length(min = 36, max = 70, message = "File key must be 36-70 characters long.")
     private String fileKey;
 
     @Schema(

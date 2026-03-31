@@ -40,6 +40,7 @@ public class FileCleanUpWorker {
                 // In case of a S3 error let life cycle handle delete
                 if (fileMetaData.getFileState() != FileState.PENDING)
                     fileStorageService.deleteFile(fileMetaData.getFileKey());
+                log.info("Deleted {}: {}", fileMetaData.getFileKey(), fileMetaData.getFileCode());
             } catch (Exception ex) {
                 log.error("Failed to hard delete file {}: {}", fileMetaData.getFileKey(), ex.getMessage());
             }

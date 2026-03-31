@@ -7,9 +7,16 @@ import {
   Pencil,
   ChevronLeft,
   CornerDownLeft,
+  CheckCircle,
+  Copy,
 } from "lucide-react";
 import GlassCard from "./GlassCard";
 import Dropzone from "react-dropzone";
+import { type ExpiryDuration } from "../api";
+import getUploadLink from "../api/getUploadLink";
+import toast from "react-hot-toast";
+import uploadFile from "../api/uploadFile";
+import confirmUpload from "../api/confirmUpload";
 
 interface ExpiryOptionProps {
   duration: string;
@@ -39,38 +46,149 @@ function ExpiryOption({
 }
 
 function SendContent() {
-  const [downloadCount, setDownloadCount] = useState(100);
-  const [activeIndex, setActiveIndex] = useState(2);
+  function checkAndReturn(
+    val: string | null,
+    lowerBound: number,
+    upperBound: number,
+    def: number,
+  ): number {
+    const num = Number(val ?? def);
+    if (num < lowerBound || num > upperBound) return def;
+    return num;
+  }
+
+  const localDownloadCount = checkAndReturn(
+    localStorage.getItem("downloadCount"),
+    1,
+    100,
+    100,
+  );
+  const localActiveIndex = checkAndReturn(
+    localStorage.getItem("activeIndex"),
+    0,
+    3,
+    2,
+  );
+
+  const [downloadCount, setDownloadCount] =
+    useState<number>(localDownloadCount);
+  const [activeIndex, setActiveIndex] = useState<number>(localActiveIndex);
+  const activeIndexToExpiry: ExpiryDuration[] = [
+    "MINUTES15",
+    "MINUTES30",
+    "MINUTES60",
+    "HOURS24",
+  ];
+
   const [file, setFile] = useState<File>();
 
-  const [isTextMode, setIsTextMode] = useState(false);
-  const [textContent, setTextContent] = useState("");
+  const [isTextMode, setIsTextMode] = useState<boolean>(false);
+  const [textContent, setTextContent] = useState<string>("");
+  const [fileCode, setFileCode] = useState<string>("");
 
   function convertTextToFile() {
     if (!textContent.trim()) return;
     const blob = new Blob([textContent], { type: "text/plain" });
-    const newFile = new File([blob], "text-snippet.txt", { type: "text/plain" });
+    const newFile = new File([blob], "text-snippet.txt", {
+      type: "text/plain",
+    });
     setFile(newFile);
     setTextContent("");
     setIsTextMode(false);
+    setFileCode("");
   }
 
   function handleSlider(e: ChangeEvent<HTMLInputElement>) {
     setDownloadCount(Number(e.target.value));
+    localStorage.setItem("downloadCount", e.target.value);
   }
   function handleOptionClick(index: number) {
     setActiveIndex(index);
+    localStorage.setItem("activeIndex", String(index));
   }
 
   function handleUnfocus(e: ChangeEvent<HTMLInputElement>) {
-    if (Number(e.target.value) < 1) setDownloadCount(1);
+    if (Number(e.target.value) < 1) {
+      setDownloadCount(100);
+      localStorage.setItem("downloadCount", e.target.value);
+    }
   }
 
   function handleInputChange(e: ChangeEvent<HTMLInputElement>) {
     const newValue = e.target.value;
     if (newValue === "" || /^\d+$/.test(newValue)) {
       const numValue = newValue === "" ? 0 : Number(newValue);
-      if (numValue <= 100 && numValue >= 0) setDownloadCount(numValue);
+      if (numValue <= 100 && numValue >= 0) {
+        setDownloadCount(numValue);
+        localStorage.setItem("downloadCount", String(numValue));
+      }
+    }
+  }
+
+  async function handleUpload() {
+    if (!file) {
+      toast.error("Please select a file to upload.");
+      return;
+    }
+
+    const expiryDuration: ExpiryDuration = activeIndexToExpiry[activeIndex];
+    const maxDownload = downloadCount;
+
+    const toastId = toast.loading("Uploading file...");
+    try {
+      const uploadLinkRes = await getUploadLink(
+        file,
+        expiryDuration,
+        maxDownload,
+      );
+      if (!uploadLinkRes.data.data) throw new Error("Upload failed.");
+
+      const {
+        fileKey,
+        fileCode: newFileCode,
+        fileUrl,
+      } = uploadLinkRes.data.data;
+
+      await uploadFile(file, fileUrl);
+
+      const confirmUploadRes = await confirmUpload(fileKey, newFileCode);
+      if (!confirmUploadRes.data.data) throw new Error("Upload failed.");
+
+      setFileCode(newFileCode);
+
+      toast.custom(
+        (t) => (
+          <div
+            className={`transition-all duration-300 transform origin-top ${
+              t.visible
+                ? "opacity-100 translate-y-0 scale-100"
+                : "opacity-0 -translate-y-4 scale-95"
+            } max-w-sm w-full bg-slate-800 border border-emerald-500 shadow-lg rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+          >
+            <div className="flex-1 flex items-center p-4">
+              <div className="shrink-0">
+                <CheckCircle className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-emerald-400">
+                  Upload Successful
+                </p>
+              </div>
+            </div>
+            <div className="flex border-l border-slate-700">
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ),
+        { id: toastId, duration: 4000 },
+      );
+    } catch {
+      toast.error("Failed to upload file.", { id: toastId, duration: 4000 });
     }
   }
 
@@ -105,7 +223,7 @@ function SendContent() {
                   }
                 }}
               />
-              
+
               <div className="flex justify-end pt-2 border-t border-slate-700/50 mt-auto">
                 <button
                   onClick={convertTextToFile}
@@ -119,7 +237,10 @@ function SendContent() {
             </div>
           ) : (
             <Dropzone
-              onDrop={(acceptedFiles) => setFile(acceptedFiles[0])}
+              onDrop={(acceptedFiles) => {
+                setFile(acceptedFiles[0]);
+                setFileCode("");
+              }}
               multiple={false}
             >
               {({ getRootProps, getInputProps, isDragActive }) => (
@@ -150,7 +271,7 @@ function SendContent() {
                       ? "Release to drop"
                       : file
                         ? file.name
-                        : "Drop your files here"}
+                        : "Drop your file here"}
                   </h2>
 
                   {!file ? (
@@ -162,11 +283,11 @@ function SendContent() {
                         </span>
                       </h3>
                       <div className="flex items-center gap-2 justify-center mt-2">
-                        <div className="h-[1px] w-8 bg-slate-700"></div>
+                        <div className="h-px w-8 bg-slate-700"></div>
                         <span className="text-xs text-slate-600 uppercase font-bold">
                           or
                         </span>
-                        <div className="h-[1px] w-8 bg-slate-700"></div>
+                        <div className="h-px w-8 bg-slate-700"></div>
                       </div>
                       <button
                         type="button"
@@ -189,6 +310,7 @@ function SendContent() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setFile(undefined);
+                          setFileCode("");
                         }}
                         className="text-rose-400 text-sm hover:text-rose-300 hover:underline font-medium transition-colors"
                       >
@@ -211,30 +333,15 @@ function SendContent() {
                   <span>Expiry Duration</span>
                 </div>
                 <div className="flex items-center gap-2 h-full">
-                  <ExpiryOption
-                    duration="15m"
-                    index={0}
-                    activeIndex={activeIndex}
-                    handleOptionClick={handleOptionClick}
-                  />
-                  <ExpiryOption
-                    duration="30m"
-                    index={1}
-                    activeIndex={activeIndex}
-                    handleOptionClick={handleOptionClick}
-                  />
-                  <ExpiryOption
-                    duration="1hr"
-                    index={2}
-                    activeIndex={activeIndex}
-                    handleOptionClick={handleOptionClick}
-                  />
-                  <ExpiryOption
-                    duration="24hr"
-                    index={3}
-                    activeIndex={activeIndex}
-                    handleOptionClick={handleOptionClick}
-                  />
+                  {["15m", "30m", "1hr", "24hr"].map((time, idx) => (
+                    <ExpiryOption
+                      key={time}
+                      duration={time}
+                      index={idx}
+                      activeIndex={activeIndex}
+                      handleOptionClick={handleOptionClick}
+                    />
+                  ))}
                 </div>
               </div>
               <div className="w-full flex flex-col gap-2">
@@ -266,14 +373,38 @@ function SendContent() {
               </div>
             </div>
 
-            <div className="w-full flex justify-center">
+            <div className="w-full flex flex-col items-center">
               <button
+                onClick={handleUpload}
                 disabled={!file}
                 className="w-full font-semibold rounded-lg flex justify-center gap-2 text-slate-900 bg-emerald-500 py-5 mt-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-[0.98]"
               >
                 <Upload />
                 Upload File
               </button>
+
+              {fileCode && (
+                <div className="w-full mt-6 bg-slate-900/50 border border-emerald-500/30 rounded-xl p-4 flex flex-col items-center gap-3 animate-slide-down">
+                  <p className="text-slate-400 text-sm">
+                    Your file is ready! Use this code to download it:
+                  </p>
+                  <div className="flex items-center gap-3 bg-slate-800 px-6 py-3 rounded-lg border border-slate-700">
+                    <span className="font-mono text-2xl font-bold text-emerald-400 tracking-widest">
+                      {fileCode}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(fileCode);
+                        toast.success("Code copied!");
+                      }}
+                      className="p-2 hover:bg-slate-700/50 text-slate-400 hover:text-emerald-400 rounded-md transition-colors"
+                      title="Copy code"
+                    >
+                      <Copy size={20} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </GlassCard>
         </div>

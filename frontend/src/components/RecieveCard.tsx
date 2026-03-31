@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
 import GlassCard from "./GlassCard";
+import ErrorBanner from "./ErrorBanner";
 
 function RecieveCard() {
   const [fileCode, setFileCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="flex justify-center animate-fade-in-up stagger-2">
-      <div className="max-w-lg w-full">
+      <div className="max-w-lg w-full flex flex-col gap-4">
+        <ErrorBanner error={error} />
         <GlassCard>
           <form>
             <div className="flex flex-col gap-2">

@@ -42,17 +42,15 @@ public class GenerateUploadLinkRequest {
     @NotNull(message = "Max download count is required")
     @Min(value = 1, message = "Max downloads must be at least 1")
     @Max(value = 100, message = "Max downloads cannot exceed 100")
-    private Integer maxDownload;
+    private Integer maxDownloadCount;
 
     @Schema(
             description = "Name of the file (must include extension)",
             example = "project_specs.pdf",
-            pattern = "^[\\w\\-. ]+\\.\\w+$",
             minLength = 4,
             maxLength = 50,
             requiredMode = Schema.RequiredMode.REQUIRED
     )
-    @Pattern(regexp = "^[\\w\\-. ]+\\.\\w+$", message = "Must have a file extension.")
     @NotNull(message = "File name is required")
     @NotBlank(message = "File name cannot be empty.")
     @Length(min = 4, max = 50, message = "File name must be 4-50 characters long.")
@@ -65,7 +63,7 @@ public class GenerateUploadLinkRequest {
     )
     @NotNull(message = "Content Type is required.")
     @NotBlank(message = "Content Type cannot be empty.")
-    @Length(min = 1, max = 20, message = "Content type must be 1-20 characters long.")
+    @Length(min = 1, max = 50, message = "Content type must be 1-50 characters long.")
     private String contentType;
 
     @Schema(

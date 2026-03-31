@@ -32,7 +32,10 @@ public class S3SharingService implements FileSharingService {
             String contentType,
             int contentSize) throws FileCodeGenerationFailure {
 
-        String extension = fileName.substring(fileName.lastIndexOf("."));
+        String extension = "";
+        if(fileName.lastIndexOf(".") != -1)
+            extension = fileName.substring(fileName.lastIndexOf("."));
+
         String key = "uploads/" + UUID.randomUUID() + extension;
 
         String fileUrl = fileStorageService.generateUploadLink(key, contentType, contentSize);
