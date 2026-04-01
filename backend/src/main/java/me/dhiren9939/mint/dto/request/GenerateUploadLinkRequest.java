@@ -1,7 +1,10 @@
 package me.dhiren9939.mint.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +20,7 @@ import org.hibernate.validator.constraints.Length;
 @Schema(description = "Request body for generating a pre-signed S3 upload link")
 public class GenerateUploadLinkRequest {
 
-    private static final int MAX_CONTENT_SIZE = 1024 * 1024;
+    private static final int MAX_CONTENT_SIZE = 5 * 1024 * 1024;
 
     @Schema(
             description = "Duration until the file expires and is deleted",
@@ -74,6 +77,6 @@ public class GenerateUploadLinkRequest {
     )
     @NotNull(message = "Content Size is required.")
     @Min(value = 1, message = "File size must be greater than 0 bytes.")
-    @Max(value = MAX_CONTENT_SIZE, message = "File Size cannot exceed 1MB.")
+    @Max(value = MAX_CONTENT_SIZE, message = "File Size cannot exceed 5MB.")
     private Integer contentSize;
 }
