@@ -6,9 +6,14 @@ services:
     ports:
       - "8080:8080"
     environment:
-      JAVA_TOOL_OPTIONS: "-Dspring.config.location=classpath:/,/app/config/"
+      JAVA_TOOL_OPTIONS: >-
+        -Dspring.config.location=classpath:/,/app/config/
+        -XX:MaxRAMPercentage=75.0
+        -XX:InitialRAMPercentage=50.0
+        -XX:+UseContainerSupport
+        -XX:+UseG1GC
     volumes:
-      - ./app/config:/app/config
+      - /app/config:/app/config
     build:
       context: ./
       tags:
@@ -19,16 +24,25 @@ services:
       mint-net:
     restart:
       unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1800m
 
   redis:
     image: redis:7-alpine
-    command: [ "redis-server", "--save", "60", "1", "--loglevel", "warning" ]
+    command: [ "redis-server", "--save", "60", "1", "--maxmemory", "200mb",
+               "--maxmemory-policy", "allkeys-lru" ]
     volumes:
       - mint-redis:/data
     networks:
       mint-net:
     restart:
       unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 200m
 
 volumes:
   mint-redis:
