@@ -57,16 +57,16 @@ function RecieveCard() {
             <div className="flex flex-col gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Retrieve
+                  Download
                 </p>
                 <h2 className="font-['Manrope'] text-xl font-bold text-slate-100">
-                  Enter your retrieval key
+                  Enter your file code
                 </h2>
               </div>
-              <div className="text-md font-medium text-slate-300/80">
-                <label htmlFor="fileCode">RETRIEVAL KEY</label>
-              </div>
               <div>
+                <label htmlFor="fileCode" className="sr-only">
+                  File code
+                </label>
                 <input
                   className="w-full rounded-xl border border-slate-700/70 bg-slate-900/45 py-6 text-center text-3xl font-semibold leading-10 tracking-[0.25rem] text-slate-200 placeholder:text-slate-500 transition-shadow duration-300 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:placeholder-transparent"
                   type="text"
@@ -85,7 +85,7 @@ function RecieveCard() {
                 disabled={!fileCode.trim()}
                 className="mt-2 flex w-full cursor-pointer justify-center gap-2 rounded-xl bg-emerald-500 py-4 font-semibold text-slate-900 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none disabled:active:scale-100 active:scale-[0.98]"
               >
-                <Download stroke="#1e293b" /> Download Files
+                <Download stroke="#1e293b" /> Download File
               </button>
             </div>
           </form>

@@ -7,7 +7,7 @@ interface NavbarProps {
 
 function Navbar({ onAboutClick }: NavbarProps) {
   return (
-    <nav className="flex w-full font-['Manrope'] justify-between items-center px-5 py-4 animate-slide-down">
+    <nav className="flex w-full items-center justify-between px-5 pb-6 pt-8 sm:pb-4 font-['Manrope'] animate-slide-down">
       <a href="/" className="group flex items-center gap-2 no-underline">
         <img
           src={logo}
