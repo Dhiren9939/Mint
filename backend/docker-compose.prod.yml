@@ -8,12 +8,12 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: >-
         -Dspring.config.location=classpath:/,/app/config/
-        -XX:MaxRAMPercentage=75.0
-        -XX:InitialRAMPercentage=50.0
+        -XX:MaxRAMPercentage=60.0
+        -XX:InitialRAMPercentage=40.0
         -XX:+UseContainerSupport
         -XX:+UseG1GC
     volumes:
-      - /app/config:/app/config
+      - ~/Mint/backend/config:/app/config
     build:
       context: ./
       tags:
@@ -27,7 +27,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1800m
+          memory: 1200m
 
   redis:
     image: redis:7-alpine
@@ -42,7 +42,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 200m
+          memory: 400m
 
 volumes:
   mint-redis:
