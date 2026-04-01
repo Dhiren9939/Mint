@@ -50,17 +50,25 @@ function RecieveCard() {
   }
 
   return (
-    <div className="flex justify-center animate-fade-in-up stagger-2">
-      <div className="max-w-lg w-full flex flex-col gap-4">
+    <div className="animate-fade-in-up stagger-2">
+      <div className="w-full max-w-3xl">
         <GlassCard>
           <form onSubmit={handleDownload}>
-            <div className="flex flex-col gap-2">
-              <div className="text-md text-slate-300/80 font-medium">
+            <div className="flex flex-col gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Retrieve
+                </p>
+                <h2 className="font-['Manrope'] text-xl font-bold text-slate-100">
+                  Enter your retrieval key
+                </h2>
+              </div>
+              <div className="text-md font-medium text-slate-300/80">
                 <label htmlFor="fileCode">RETRIEVAL KEY</label>
               </div>
               <div>
                 <input
-                  className="focus:outline-none focus:ring-1 focus:ring-emerald-500/30 text-3xl leading-10 font-semibold text-center bg-slate-700/15 rounded-lg w-full py-6 placeholder:text-slate-500 focus:placeholder-transparent text-slate-200 tracking-[0.25rem] transition-shadow duration-300"
+                  className="w-full rounded-xl border border-slate-700/70 bg-slate-900/45 py-6 text-center text-3xl font-semibold leading-10 tracking-[0.25rem] text-slate-200 placeholder:text-slate-500 transition-shadow duration-300 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:placeholder-transparent"
                   type="text"
                   name="fileCode"
                   id="fileCode"
@@ -75,7 +83,7 @@ function RecieveCard() {
               <button
                 type="submit"
                 disabled={!fileCode.trim()}
-                className="font-semibold rounded-lg flex w-full justify-center gap-2 bg-emerald-500 py-5 mt-4 text-slate-900 cursor-pointer hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:active:scale-100 active:scale-[0.98] transition-all duration-300"
+                className="mt-2 flex w-full cursor-pointer justify-center gap-2 rounded-xl bg-emerald-500 py-4 font-semibold text-slate-900 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none disabled:active:scale-100 active:scale-[0.98]"
               >
                 <Download stroke="#1e293b" /> Download Files
               </button>

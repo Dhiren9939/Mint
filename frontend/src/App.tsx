@@ -5,6 +5,8 @@ import About from "./components/About";
 import Footer from "./components/Footer";
 import Toast from "./components/Toast";
 import toast, { useToasterStore } from "react-hot-toast";
+import { Route, Routes } from "react-router-dom";
+import NotFound from "./components/NotFound";
 
 function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -25,13 +27,19 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen font-['Inter'] flex flex-col">
+    <div className="relative min-h-screen overflow-x-hidden font-['Inter'] text-slate-100">
       <div className="ambient-bg" />
-      <Navbar onAboutClick={() => setAboutOpen(true)} />
-      <div className="px-6 pb-12 flex-1">
-        <Home />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-linear-to-b from-emerald-500/6 via-transparent to-transparent" />
+      <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 sm:px-6 lg:px-10">
+        <Navbar onAboutClick={() => setAboutOpen(true)} />
+        <main className="flex-1 pb-12 pt-2 sm:pt-6">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        <Footer />
       </div>
-      <Footer />
       <About isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
       <Toast isMobile={isMobile} />
     </div>
