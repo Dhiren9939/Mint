@@ -17,7 +17,6 @@ import toast from "react-hot-toast";
 import uploadFile from "../api/uploadFile";
 import confirmUpload from "../api/confirmUpload";
 import { AxiosError } from "axios";
-import { type ApiResponse } from "../api";
 
 interface ExpiryOptionProps {
   duration: string;
@@ -153,7 +152,8 @@ function SendContent() {
       await uploadFile(file, fileUrl);
 
       const confirmUploadRes = await confirmUpload(fileKey, newFileCode);
-      if (!confirmUploadRes.data.data) throw new Error("Failed to upload file.");
+      if (!confirmUploadRes.data.data)
+        throw new Error("Failed to upload file.");
 
       setFileCode(newFileCode);
 
@@ -190,7 +190,7 @@ function SendContent() {
       <div className="flex flex-col gap-4 items-center justify-center text-slate-300">
         <div className="w-full max-w-2xl">
           {isTextMode ? (
-            <div className="flex flex-col gap-4 p-6 border-2 border-emerald-500/30 bg-slate-900/50 rounded-2xl min-h-[300px]">
+            <div className="flex flex-col gap-4 p-6 border-2 border-emerald-500/30 bg-slate-900/50 rounded-2xl min-h-75">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2 text-emerald-500">
                   <Pencil size={20} />

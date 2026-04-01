@@ -2,11 +2,8 @@ import { useState, type SubmitEvent } from "react";
 import { Download } from "lucide-react";
 import GlassCard from "./GlassCard";
 import toast from "react-hot-toast";
-import getDownloadLink, {
-  type GetDownloadLinkResponse,
-} from "../api/getDownloadLink";
+import getDownloadLink from "../api/getDownloadLink";
 import { AxiosError } from "axios";
-import type { ApiResponse } from "../api";
 
 function RecieveCard() {
   const [fileCode, setFileCode] = useState("");
