@@ -4,70 +4,98 @@
   <img src="frontend/public/favicon.svg" alt="Mint Logo" width="120" />
 </p>
 
-[![Status](https://img.shields.io/badge/status-active-success)](https://github.com/Dhiren9939/Mint)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/Dhiren9939/Mint)
-[![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/technologies/downloads/)
-[![Spring Boot](https://img.shields.io/badge/Spring--Boot-3.4.2-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-database-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-caching-DC382D?logo=redis&logoColor=white)](https://redis.io/)
-[![AWS S3](https://img.shields.io/badge/AWS--S3-storage-FF9900?logo=amazons3&logoColor=white)](https://aws.amazon.com/s3/)
-[![License](https://img.shields.io/badge/license-unlicensed-lightgrey)](https://github.com/Dhiren9939/Mint)
+A modern anonymous file and text sharing platform built with React, Spring Boot, PostgreSQL, Redis and AWS S3.
 
-Mint is a modern, anonymous file and text sharing platform built with React, Spring Boot, and AWS S3.
+## Highlights
 
-`react` `vite` `springboot` `postgresql` `redis` `tailwindcss` `awss3` `bucket4j` `lucide-react`
-
-## Core Features
-
-- **Fully Anonymous:** No registration, no user profiles, no tracking.
-- **Secure S3 Storage:** All files are stored securely with signed URL access.
-- **Instant Sharing:** Upload any file or text and get a unique retrieval key.
-- **Auto-Expiring Links:** Links and resources are automatically purged after expiration.
-- **Modern UI:** Sleek, dark glassmorphism interface with smooth animations.
+- **Anonymous sharing** without registration or user accounts.
+- **Secure storage** using AWS S3 signed URLs.
+- **Auto-expiring files** and link cleanup.
+- **Rate limiting** on public endpoints via Bucket4j.
+- **Modern frontend** built with React + Vite.
 
 ## Tech Stack
 
-- **Frontend:** React 19, Vite, Tailwind CSS, React Router, Lucide React
-- **Backend:** Java 21, Spring Boot, PostgreSQL, Redis, Bucket4j
-- **Infrastructure:** AWS S3 for storage
+- **Frontend:** React 19, Vite, Tailwind CSS, TypeScript
+- **Backend:** Java 21, Spring Boot 3.4.2
+- **Persistence:** PostgreSQL
+- **Cache / session:** Redis
+- **Storage:** AWS S3
 
 ## Project Structure
 
 ```text
 Mint/
-  backend/    Spring Boot API, storage integration, metadata persistence
-  frontend/   React app, file/text upload UI, anonymous retrieval
+  backend/    Spring Boot API, PostgreSQL metadata, AWS S3 storage
+  frontend/   React app, upload/share UI, analytics
 ```
 
-## NPM Scripts & Tools
+## Prerequisites
 
-### Backend (`backend/`)
+- Java 21 SDK
+- Maven (or use `./backend/mvnw`)
+- Node.js 20+ and npm
+- PostgreSQL
+- Redis
+- AWS credentials configured for S3 access
 
-- `./mvnw spring-boot:run` - Run the application in development mode
-- `./mvnw clean package` - Build the production-ready JAR
+## Running Locally
 
-### Frontend (`frontend/package.json`)
+### Backend
 
-- `npm run dev` - Run Vite dev server
-- `npm run build` - Production build
-- `npm run preview` - Preview production build
-- `npm run lint` - Lint frontend source
+```bash
+cd backend
+./mvnw spring-boot:run
+```
 
+### Frontend
 
-## Current State
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-- No automated tests are wired yet.
-- Rate limiting is active on all public endpoints via Bucket4j.
-- Project is optimized for local/dev workflow right now.
+Open the frontend at the Vite dev server URL shown in the terminal.
+
+## Build
+
+### Backend
+
+```bash
+cd backend
+./mvnw clean package
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm run build
+```
+
+## Available Scripts
+
+### Backend
+
+- `./mvnw spring-boot:run` — start the backend in development mode
+- `./mvnw clean package` — build the backend JAR
+
+### Frontend
+
+- `npm run dev` — start Vite dev server
+- `npm run build` — build production assets
+- `npm run preview` — preview production build
+- `npm run lint` — run frontend lint checks
+
+## Notes
+
+- The repository currently does not include a formal open source license.
+- The root project includes a production Docker Compose file at `backend/docker-compose.prod.yml`.
 
 ## Contributing
 
-1. Fork and clone the repository.
-2. Create a specific feature branch.
-3. Ensure the project builds successfully on both ends.
-4. Provide clear reproduction or validation steps in your PR.
-
-## License
-
-No license file is currently defined in this repository.
+1. Fork the repo.
+2. Create a branch for your feature or fix.
+3. Make sure the backend and frontend build correctly.
+4. Submit a PR with a clear summary and validation steps.
