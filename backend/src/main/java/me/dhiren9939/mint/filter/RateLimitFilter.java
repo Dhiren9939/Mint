@@ -14,11 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.common.ApiError;
 import me.dhiren9939.mint.common.ApiResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
@@ -30,9 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
-@Component
 @RequiredArgsConstructor
-@Order(Ordered.HIGHEST_PRECEDENCE)
 public class RateLimitFilter extends OncePerRequestFilter {
 
     // Per Month
@@ -58,24 +51,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final ProxyManager<String> proxyManager;
     private final ObjectMapper objectMapper;
-    private final CorsConfigurationSource corsConfigurationSource;
 
     @Override
     public void doFilterInternal(HttpServletRequest request,
                                  HttpServletResponse response,
                                  FilterChain filterChain) throws ServletException, IOException {
-
-        // Add Access-Control headers according to CORS config
-        CorsConfiguration corsConfig = corsConfigurationSource.getCorsConfiguration(request);
-        if (corsConfig != null) {
-            String origin = request.getHeader("Origin");
-            if (origin != null && corsConfig.checkOrigin(origin) != null) {
-                response.setHeader("Access-Control-Allow-Headers", "Content-Type");
-                response.setHeader("Access-Control-Allow-Origin", origin);
-                response.setHeader("Access-Control-Allow-Credentials",
-                        String.valueOf(Boolean.TRUE.equals(corsConfig.getAllowCredentials())));
-            }
-        }
 
         String method = request.getMethod().toUpperCase();
         boolean isGet = method.equals("GET");
@@ -114,7 +94,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        doFilter(request, response, filterChain);
+        filterChain.doFilter(request, response);
     }
 
     private String keyBuilder(String type, String method, String id) {
