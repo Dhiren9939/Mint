@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "26.1.0"
+      - name: Run Tests
+        run: npm test
       - name: Build Frontend
         working-directory: ./frontend
         run: |
