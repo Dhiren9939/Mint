@@ -4,24 +4,22 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - "frontend/**"
+    paths: ["frontend/**"]
   pull_request:
     branches: [main]
-    paths:
-      - "frontend/**"
+    paths: ["frontend/**"]
 
 jobs:
-  bulid:
+  build:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./frontend
-        
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         name: Checkout Files
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         name: Setup Node
         with:
           node-version: "26.1.0"
@@ -29,7 +27,8 @@ jobs:
         name: Warm Cache
         with:
           path: ~/.npm
-          key: maven-${{ hashFiles('**/package-lock.json') }}
+          key: nodejs-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: nodejs-
       - name: Install Dependencies
         run: npm ci
       - name: Run Tests
