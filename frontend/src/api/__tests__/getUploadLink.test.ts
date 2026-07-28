@@ -31,7 +31,7 @@ describe("getUploadLink API", () => {
         },
       },
     };
-    (api.post as any).mockResolvedValueOnce(mockResponse);
+    vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
 
     const dummyFile = new File(["hello world"], "hello.txt", {
       type: "text/plain",

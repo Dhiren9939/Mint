@@ -29,7 +29,7 @@ describe("getDownloadLink API", () => {
         },
       },
     };
-    (api.get as any).mockResolvedValueOnce(mockResponse);
+    vi.mocked(api.get).mockResolvedValueOnce(mockResponse);
 
     const result = await getDownloadLink("a1b2c3");
 

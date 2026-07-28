@@ -25,11 +25,11 @@ jobs:
           java-version: "21"
           distribution: "temurin"
       - uses: actions/cache@v6
-        name: Warm Cache
+        name: Warmup Cache
         with:
           path: ~/.m2/repository
           key: maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: maven
+          restore-keys: maven-
       - name: Run Tests
         run: mvn clean test
       - name: Build Backend

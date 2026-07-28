@@ -44,7 +44,7 @@ describe("RecieveCard Component", () => {
   it("calls getDownloadLink and window.open on valid code submission", async () => {
     const windowOpenSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
-    (getDownloadLink as any).mockResolvedValueOnce({
+    vi.mocked(getDownloadLink).mockResolvedValueOnce({
       data: {
         data: {
           fileUrl: "http://s3.download.url/file.pdf",

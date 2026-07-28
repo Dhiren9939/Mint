@@ -29,7 +29,7 @@ describe("confirmUpload API", () => {
         },
       },
     };
-    (api.post as any).mockResolvedValueOnce(mockResponse);
+    vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
 
     const result = await confirmUpload("uploads/key.txt", "a1b2c3");
 

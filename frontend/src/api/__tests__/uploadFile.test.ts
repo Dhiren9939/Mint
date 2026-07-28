@@ -14,7 +14,7 @@ describe("uploadFile API", () => {
   });
 
   it("calls axios.put with file and custom content-type header", async () => {
-    (axios.put as any).mockResolvedValueOnce({ status: 200 });
+    vi.mocked(axios.put).mockResolvedValueOnce({ status: 200 } as never);
 
     const dummyFile = new File(["test data"], "test.pdf", {
       type: "application/pdf",

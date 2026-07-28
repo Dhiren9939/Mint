@@ -24,13 +24,15 @@ jobs:
         with:
           node-version: "26.1.0"
       - uses: actions/cache@v6
-        name: Warm Cache
+        name: Warmup Cache
         with:
           path: ~/.npm
           key: nodejs-${{ hashFiles('**/package-lock.json') }}
           restore-keys: nodejs-
       - name: Install Dependencies
         run: npm ci
+      - name: Lint Checks
+        run: npm run lint
       - name: Run Tests
         run: npm test
       - name: Build Frontend
