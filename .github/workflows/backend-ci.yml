@@ -22,7 +22,10 @@ jobs:
         with:
           java-version: "21"
           distribution: "temurin"
-          cache: "maven"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml') }}
       - name: Run Tests
         run: mvn clean test
       - name: Build Backend
