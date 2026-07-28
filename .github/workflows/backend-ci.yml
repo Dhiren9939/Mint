@@ -18,11 +18,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        name: Pull Files
       - uses: actions/setup-java@v5
+        name: Setup Java
         with:
           java-version: "21"
           distribution: "temurin"
       - uses: actions/cache@v6
+        name: Warm Cache
         with:
           path: ~/.m2/repository
           key: maven-${{ hashFiles('**/pom.xml') }}

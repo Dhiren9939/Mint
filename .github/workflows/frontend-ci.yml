@@ -20,9 +20,16 @@ jobs:
         
     steps:
       - uses: actions/checkout@v4
+        name: Checkout Files
       - uses: actions/setup-node@v4
+        name: Setup Node
         with:
           node-version: "26.1.0"
+      - uses: actions/cache@v6
+        name: Warm Cache
+        with:
+          path: ~/.npm
+          key: maven-${{ hashFiles('**/package-lock.json') }}
       - name: Install Dependencies
         run: npm ci
       - name: Run Tests
