@@ -46,10 +46,19 @@ describe("RecieveCard Component", () => {
 
     vi.mocked(getDownloadLink).mockResolvedValueOnce({
       data: {
+        success: true,
+        message: "Success",
         data: {
           fileUrl: "http://s3.download.url/file.pdf",
+          expiresAt: "2026-07-26T20:00:00",
+          dowloadCount: 1,
+          maxDownloadCount: 5,
         },
       },
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config: {} as never,
     });
 
     render(<RecieveCard />);
