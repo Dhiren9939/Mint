@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class MintApplication {
 	// Dummy backend change for branch and PR workflow validation.
 	public static void main(String[] args) {
+		// Application startup remains unchanged by this placeholder commit.
 		SpringApplication.run(MintApplication.class, args);
 	}
 }
