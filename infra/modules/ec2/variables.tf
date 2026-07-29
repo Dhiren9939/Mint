@@ -14,6 +14,6 @@ variable "iam_role_instance_profile_name" {
 }
 
 variable "ssh_public_key" {
-  type = string
+  type        = string
   description = "The public key for Mint Key Pair"
 }

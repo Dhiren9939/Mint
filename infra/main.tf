@@ -60,7 +60,7 @@ module "rds" {
 module "cloudfront" {
   source                      = "./modules/cloudfront"
   frontend_bucket_arn         = module.s3.frontend_bucket_arn
-  frontend_bucket_id          = module.s3.frontend_bucket_id
+  frontend_bucket_name        = module.s3.frontend_bucket_name
   frontend_bucket_domain_name = module.s3.frontend_bucket_domain_name
   backend_ec2_domain_name     = module.ec2.server_public_dns
   acm_certificate_arn         = var.acm_certificate_arn

@@ -38,11 +38,11 @@ variable "acm_certificate_arn" {
 }
 
 variable "zone_id" {
-  type = string
+  type        = string
   description = "The id of the route53 hosted zone"
 }
 
 variable "ssh_public_key" {
-  type = string
+  type        = string
   description = "The public key for Mint Key Pair"
 }

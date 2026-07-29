@@ -32,13 +32,13 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   ordered_cache_behavior {
-    path_pattern             = "/api/*"
-    allowed_methods          = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
-    cached_methods           = ["GET", "HEAD"]
-    target_origin_id         = "EC2-${var.backend_ec2_domain_name}"
-    viewer_protocol_policy   = "redirect-to-https"
+    path_pattern           = "/api/*"
+    allowed_methods        = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "EC2-${var.backend_ec2_domain_name}"
+    viewer_protocol_policy = "redirect-to-https"
     // AWS Managed Policies for Caching Optimized and Caching Disabled
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
   }
 
   default_cache_behavior {
@@ -47,7 +47,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     target_origin_id       = "S3-${var.frontend_bucket_domain_name}"
     viewer_protocol_policy = "redirect-to-https"
     // AWS Managed Policy for Caching Optimized
-    cache_policy_id        = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
   }
 }
 
@@ -59,7 +59,7 @@ resource "aws_cloudfront_origin_access_control" "oac" {
 }
 
 resource "aws_s3_bucket_policy" "cloudfront_access" {
-  bucket = var.frontend_bucket_id
+  bucket = var.frontend_bucket_name
 
   policy = jsonencode({
     Version = "2012-10-17",
