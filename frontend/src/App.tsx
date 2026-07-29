@@ -9,6 +9,7 @@ import { Route, Routes } from "react-router-dom";
 import NotFound from "./components/NotFound";
 
 function App() {
+  // Dummy frontend change for branch and PR workflow validation.
   const [aboutOpen, setAboutOpen] = useState(false);
   const { toasts } = useToasterStore();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
