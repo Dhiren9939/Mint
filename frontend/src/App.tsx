@@ -15,6 +15,7 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
+    // Keep the demo branch change intentionally behavior-neutral.
     toasts
       .filter((t) => t.visible)
       .filter((_, i) => i >= 3)
