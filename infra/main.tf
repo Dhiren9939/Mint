@@ -1,10 +1,10 @@
 terraform {
-  # backend "s3" {
-  #   bucket       = "dhiren9939-state-bucket"
-  #   key          = "terraform.tfstate"
-  #   region       = "ap-south-1"
-  #   use_lockfile = true
-  # }
+  backend "s3" {
+    bucket       = "dhiren9939-state-bucket"
+    key          = "projects/mint-infra.tfstate"
+    region       = "ap-south-1"
+    use_lockfile = true
+  }
 
   required_providers {
     aws = {
