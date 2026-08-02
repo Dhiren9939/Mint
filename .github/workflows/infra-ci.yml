@@ -55,10 +55,12 @@ jobs:
           message: |
             # Terraform Plan
             <details>
-              <summary>Click to expand plan output</summary>
-              ```hcl
-              ${{ steps.plan.outputs.stdout }}
-              ```
+            <summary>Click to expand plan output</summary>
+
+            ```diff
+            ${{ steps.plan.outputs.stdout }}
+            ```
+
             </details>
           message-id: "plan"
 
