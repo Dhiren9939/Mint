@@ -19,8 +19,12 @@ jobs:
     defaults:
       run:
         working-directory: ./infra
+        
     steps:
+      - uses: actions/checkout@v7
+        name: Checkout Files
       - uses: aws-actions/configure-aws-credentials@v6
+        name: Configure AWS Credentials
         with:
           aws-region: ap-south-1
           role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
