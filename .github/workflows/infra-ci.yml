@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
   id-token: write
 
 jobs:
@@ -19,13 +20,41 @@ jobs:
     defaults:
       run:
         working-directory: ./infra
-        
+
     steps:
       - uses: actions/checkout@v7
         name: Checkout Files
+
+      - uses: hashicorp/setup-terraform@v4
+        name: Setup Terraform
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform validate
+        run: terraform validate -no-color
+
       - uses: aws-actions/configure-aws-credentials@v6
         name: Configure AWS Credentials
         with:
           aws-region: ap-south-1
           role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
-      - run: aws sts get-caller-identity
+
+      - name: Terraform Plan
+        env:
+          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        id: plan
+        run: terraform plan -no-color -input=false
+        continue-on-error: true
+
+      - name: Add PR Comment
+        if: github.event_name == 'pull_request'
+        uses: mshick/add-pr-comment@v3
+        with:
+          message: ${{steps.plan.outputs.stdout}}
+          message-id: "plan"
+
+      - name: Set Failure Exit Code
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
