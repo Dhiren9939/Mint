@@ -28,17 +28,17 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         name: Setup Terraform
 
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform validate
-        run: terraform validate -no-color
-
       - uses: aws-actions/configure-aws-credentials@v6
         name: Configure AWS Credentials
         with:
           aws-region: ap-south-1
           role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate -no-color
 
       - name: Terraform Plan
         env:
@@ -52,7 +52,16 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: mshick/add-pr-comment@v3
         with:
-          message: ${{steps.plan.outputs.stdout}}
+          message: |
+            # Terraform Plan
+            <details>
+            <summary>Click to expand plan output</summary>
+
+            ```diff
+            ${{ steps.plan.outputs.stdout }}
+            ```
+
+            </details>
           message-id: "plan"
 
       - name: Set Failure Exit Code
