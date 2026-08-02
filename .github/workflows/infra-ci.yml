@@ -1,0 +1,27 @@
+name: infra-ci
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["infra/**"]
+  pull_request:
+    branches: [main]
+    paths: ["infra/**"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ap-south-1
+          role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
+      - run: aws sts get-caller-identity
