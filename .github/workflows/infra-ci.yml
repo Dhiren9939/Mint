@@ -28,17 +28,17 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         name: Setup Terraform
 
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform validate
-        run: terraform validate -no-color
-
       - uses: aws-actions/configure-aws-credentials@v6
         name: Configure AWS Credentials
         with:
           aws-region: ap-south-1
           role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform validate
+        run: terraform validate -no-color
 
       - name: Terraform Plan
         env:
