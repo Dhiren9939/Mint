@@ -33,3 +33,7 @@ output "server_instance_id" {
 output "db_endpoint" {
   value = module.rds.db_endpoint
 }
+
+output "server_instance_id" {
+  value = module.ec2.server_instance_id
+}
