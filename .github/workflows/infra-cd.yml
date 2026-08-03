@@ -1,0 +1,46 @@
+name: infra-cd
+
+on:
+  push:
+    branches: [main]
+    paths: ["infra/**"]
+
+jobs:
+  run-ci:
+    uses: ./.github/workflows/infra-ci.yml
+
+  apply:
+    needs: run-ci
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout Files
+
+      - uses: hashicorp/setup-terraform@v4
+        name: Setup Terraform
+        with:
+          terraform_version: "1.15.3"
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        name: Configure AWS Credentials
+        with:
+          aws-region: ap-south-1
+          role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply
+      
+      - name: Save EC2 ID
+        id: ec2_id
+        run: echo "EC2_ID=$(terraform output -raw state_bucket_arn)" >> $GITHUB_OUTPUT
+
+      - name: 
+      
+      

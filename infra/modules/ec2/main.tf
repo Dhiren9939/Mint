@@ -6,7 +6,7 @@ resource "aws_key_pair" "mint_key" {
 resource "aws_instance" "server" {
   instance_type               = "t3.micro"
   key_name                    = aws_key_pair.mint_key.key_name
-  ami                         = "ami-00d2dbb426772b03a"
+  ami                         = "ami-0ad737a8b58b3fb92"
   associate_public_ip_address = true
   iam_instance_profile        = var.iam_role_instance_profile_name
 
