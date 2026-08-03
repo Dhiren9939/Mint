@@ -105,6 +105,14 @@ resource "aws_security_group_rule" "ec2_to_rds" {
   source_security_group_id = aws_security_group.rds_sg.id
 }
 
+resource "aws_security_group_rule" "ec2_to_internet" {
+  type = "egress"
+  security_group_id = aws_security_group.ec2_sg
+  protocol = "tcp"
+  from_port = 443
+  to_port = 443
+}
+
 resource "aws_security_group" "rds_sg" {
   vpc_id = aws_vpc.main_vpc.id
 }
