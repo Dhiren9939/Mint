@@ -107,7 +107,7 @@ resource "aws_security_group_rule" "ec2_to_rds" {
 
 resource "aws_security_group_rule" "ec2_to_internet" {
   type = "egress"
-  security_group_id = aws_security_group.ec2_sg
+  security_group_id = aws_security_group.ec2_sg.id
   protocol = "tcp"
   from_port = 443
   to_port = 443
