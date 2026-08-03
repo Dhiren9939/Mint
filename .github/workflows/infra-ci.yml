@@ -56,6 +56,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: .planfile
+          working-directory: ./infra
 
       - name: Set Failure Exit Code
         if: steps.plan.outcome == 'failure'
