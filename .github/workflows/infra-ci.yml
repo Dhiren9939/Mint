@@ -3,9 +3,6 @@ name: infra-ci
 on:
   workflow_call:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ["infra/**"]
   pull_request:
     branches: [main]
     paths: ["infra/**"]
