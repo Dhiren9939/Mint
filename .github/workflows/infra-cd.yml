@@ -3,7 +3,7 @@ name: infra-cd
 on:
   push:
     branches: [main]
-    paths: ["infra/**"]
+    paths: ["infra/**", "scripts/**"]
 
 jobs:
   run-ci:
@@ -35,12 +35,35 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
-        run: terraform apply
-      
-      - name: Save EC2 ID
-        id: ec2_id
-        run: echo "EC2_ID=$(terraform output -raw state_bucket_arn)" >> $GITHUB_OUTPUT
+        env:
+          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        run: terraform apply -no-color -input=false -auto-approve
 
-      - name: 
-      
-      
+      - name: Save EC2 IP
+        id: ec2_ip
+        run: echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+
+      - name: Update EC2 IP Variable
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        run: |
+          gh variable set EC2_PUBLIC_IP --body "${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP }}"
+
+      - name: SCP configure-server.sh
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP}}
+          username: admin
+          key: ${{ secrets.SSH_KEY }}
+          source: "scripts/infra/configure-server.sh"
+          target: "/tmp/"
+          strip_components: 2
+
+      - name: Configure EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP }}
+          username: admin
+          key: ${{ secrets.SSH_KEY }}
+          script: sudo bash /tmp/configure-server.sh
