@@ -3,6 +3,10 @@ name: destory-app
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   destory:
     runs-on: ubuntu-latest
