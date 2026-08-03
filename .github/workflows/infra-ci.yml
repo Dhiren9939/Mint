@@ -28,7 +28,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         name: Setup Terraform
         with:
-          terraform_version: '1.15.3'
+          terraform_version: "1.15.3"
 
       - uses: aws-actions/configure-aws-credentials@v6
         name: Configure AWS Credentials
@@ -47,24 +47,15 @@ jobs:
           TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         id: plan
-        run: terraform plan -no-color -input=false
+        run: terraform plan -no-color -input=false -out .planfile
         continue-on-error: true
 
       - name: Add PR Comment
         if: github.event_name == 'pull_request'
-        uses: mshick/add-pr-comment@v3
+        uses: borchero/terraform-plan-comment@v3.2.0
         with:
-          message: |
-            # Terraform Plan
-            <details>
-            <summary>Click to expand plan output</summary>
-
-            ```diff
-            ${{ steps.plan.outputs.stdout }}
-            ```
-
-            </details>
-          message-id: "plan"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: .planfile
 
       - name: Set Failure Exit Code
         if: steps.plan.outcome == 'failure'
