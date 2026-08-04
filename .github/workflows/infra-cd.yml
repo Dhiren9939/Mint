@@ -50,7 +50,8 @@ jobs:
         id: tf_out
         run: |
           echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
-          echo "RDS_ENDPOINT=$(terraform output -raw db_endpoint)" >> $GITHUB_OUTPUT
+          HOST="$(terraform output -raw db_endpoint)"
+          echo "RDS_ENDPOINT=${HOST:0:-5}" >> $GITHUB_OUTPUT
 
       - name: Update Repo Variables
         env:
@@ -77,4 +78,5 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             sudo bash /tmp/configure-server.sh
-            PGPASSWORD="${{ secrets.DB_PASSWORD }}" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -f /tmp/schema.sql
+            curl -o /tmp/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+            PGPASSWORD="${{ secrets.DB_PASSWORD }}" PGSSLMODE="verify-full" PGSSLROOTCERT="/tmp/globa-bundle.pem" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -h ${{ steps.tf_out.outputs.RDS_ENDPOINT }} -f /tmp/schema.sql
