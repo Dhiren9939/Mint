@@ -83,6 +83,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "backend/docker-compose.prod.yml"
           target: "/tmp/config"
+          overwrite: true
           strip_components: 1
 
       - name: Upload application properties
@@ -93,6 +94,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "backend/src/main/resources/application.properties,backend/src/main/resources/application-prod.properties"
           target: "/tmp/config"
+          overwrite: true
           strip_components: 4
 
       - name: Deploy backend

@@ -12,10 +12,18 @@ RUN mvn package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
 
+RUN addgroup -S app && adduser -S -G app app
+
+RUN mkdir -p /opt/mint-backend/config
+
+RUN chown -R app:app /app /opt/mint-backend
+
 WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
+
+USER app
 
 ENTRYPOINT ["java","-jar","app.jar"]
