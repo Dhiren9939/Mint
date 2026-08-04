@@ -27,7 +27,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1200m
+          memory: 700m
 
   redis:
     image: redis:7-alpine
@@ -42,7 +42,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 400m
+          memory: 200m
 
 volumes:
   mint-redis:
