@@ -2,6 +2,12 @@ resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   default_root_object = "index.html"
 
+  custom_error_response {
+    error_code         = 403
+    response_code      = 404
+    response_page_path = "/index"
+  }
+
   viewer_certificate {
     acm_certificate_arn      = var.acm_certificate_arn
     ssl_support_method       = "sni-only"
