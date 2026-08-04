@@ -22,11 +22,9 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    @Value("${allowed.cors.origin}")
-    String allowedOrigin;
-
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    @Profile("!prod")
+    public CorsConfigurationSource corsConfigurationSource(@Value("${allowed.cors.origin}") String allowedOrigin) {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of(allowedOrigin));

@@ -82,7 +82,7 @@ jobs:
           username: admin
           key: ${{ secrets.SSH_KEY }}
           source: "backend/docker-compose.prod.yml"
-          target: "/tmp/config"
+          target: "/tmp/"
           overwrite: true
           strip_components: 1
 
@@ -93,7 +93,7 @@ jobs:
           username: admin
           key: ${{ secrets.SSH_KEY }}
           source: "backend/src/main/resources/application.properties,backend/src/main/resources/application-prod.properties"
-          target: "/tmp/config"
+          target: "/tmp/"
           overwrite: true
           strip_components: 4
 
@@ -110,6 +110,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: IMAGE_TAG,DB_HOST,DB_USERNAME,DB_PASSWORD
           script: |
-            sudo cp -r /tmp/config /opt/mint-backend/
+            sudo cp /tmp/docker-compose.prod.yml /tmp/applications.properties /tmp/applications-prod.properties /opt/mint-backend/config
             sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml pull
             sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml up -d
