@@ -102,5 +102,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: IMAGE_TAG,DB_HOST,DB_USERNAME,DB_PASSWORD
           script: |
+            echo $IMAGE_TAG
             sudo cp /tmp/docker-compose.prod.yml /tmp/applications.properties /tmp/applications-prod.properties /opt/mint-backend/config
             sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml up -d --pull always --remove-orphans
