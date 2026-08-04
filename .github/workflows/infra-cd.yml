@@ -79,6 +79,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             sudo mkdir -p /opt/mint-backend
-            sudo cp -r /tmp/mint-backend/ /opt/mint-backend/
+            sudo cp -r /tmp/mint-backend/ /opt
             sudo bash /opt/mint-backend/configure-server.sh
             PGPASSWORD="${{ secrets.DB_PASSWORD }}" PGSSLMODE="verify-full" PGSSLROOTCERT="/opt/mint-backend/config/global-bundle.pem" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -h ${{ steps.tf_out.outputs.RDS_ENDPOINT }} -f /opt/mint-backend/schema.sql
