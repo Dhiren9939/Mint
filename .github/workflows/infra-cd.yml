@@ -79,4 +79,4 @@ jobs:
           script: |
             sudo bash /tmp/configure-server.sh
             curl -o /tmp/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
-            PGPASSWORD="${{ secrets.DB_PASSWORD }}" PGSSLMODE="verify-full" PGSSLROOTCERT="/tmp/globa-bundle.pem" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -h ${{ steps.tf_out.outputs.RDS_ENDPOINT }} -f /tmp/schema.sql
+            PGPASSWORD="${{ secrets.DB_PASSWORD }}" PGSSLMODE="verify-full" PGSSLROOTCERT="/tmp/global-bundle.pem" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -h ${{ steps.tf_out.outputs.RDS_ENDPOINT }} -f /tmp/schema.sql
