@@ -70,7 +70,7 @@ jobs:
           target: "/tmp/"
           strip_components: 2
 
-      - name: Configure EC2
+      - name: Configure EC2 & RDS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
