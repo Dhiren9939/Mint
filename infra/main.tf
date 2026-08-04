@@ -55,6 +55,7 @@ module "rds" {
   db_password          = var.db_password
   db_subnet_group_name = module.vpc.rds_subnet_group_name
   rds_sg_id            = module.vpc.rds_sg_id
+  db_name = var.db_name
 }
 
 module "cloudfront" {

@@ -22,6 +22,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "db_name" {
+  type = string
+  description = "The name of the databse"
+  default = "mintdb"
+}
+
 variable "mint_frontend_bucket" {
   type    = string
   default = "mint-frontend-bucket"

@@ -55,13 +55,13 @@ jobs:
         run: |
           gh variable set EC2_PUBLIC_IP --body "${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP }}"
 
-      - name: SCP configure-server.sh
+      - name: SCP scripts
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP}}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          source: "scripts/infra/configure-server.sh"
+          source: "scripts/infra/configure-server.sh,scripts/db/schema.sql"
           target: "/tmp/"
           strip_components: 2
 
@@ -71,4 +71,6 @@ jobs:
           host: ${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          script: sudo bash /tmp/configure-server.sh
+          script: | 
+            sudo bash /tmp/configure-server.sh
+            PGPASSWORD="${{ secrets.DB_PASSWORD }}" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -f /tmp/schema.sql
