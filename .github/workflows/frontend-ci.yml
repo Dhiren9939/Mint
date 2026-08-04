@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload Build
         id: upload-build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: frontend-build
