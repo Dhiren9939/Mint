@@ -25,4 +25,12 @@ jobs:
           artifact-ids: ${{ needs.run-ci.outputs.build-id }}
           path: /tmp/build
 
-      - run: ls /tmp/build
+      - uses: aws-actions/configure-aws-credentials@v6
+        name: Configure AWS Credentials
+        with:
+          aws-region: ap-south-1
+          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
+
+      - name: Sync S3
+        run: |
+          aws s3 sync /tmp/build s3://mint-frontend-bucket/
