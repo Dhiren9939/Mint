@@ -8,15 +8,15 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       JAVA_TOOL_OPTIONS: >-
-        -Dspring.config.location=classpath:/,/opt/mint-backend
+        -Dspring.config.location=classpath:/,/opt/mint-backend/config/
         -XX:MaxRAMPercentage=85.0
         -XX:InitialRAMPercentage=40.0
         -XX:+UseG1GC
       DB_USERNAME: ${DB_USERNAME:?DB_USERNAME must be set}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-      DB_URL: ${DB_URL:?DB_URL must be set}
+      DB_URL: ${DB_HOST:?DB_HOST must be set}
     volumes:
-      - /opt/mint-backend/:/opt/mint-backend:ro
+      - /opt/mint-backend/config/:/opt/mint-backend/config:ro
     depends_on:
       redis:
         condition: service_healthy
