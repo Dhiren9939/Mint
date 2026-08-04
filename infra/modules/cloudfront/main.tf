@@ -1,5 +1,6 @@
 resource "aws_cloudfront_distribution" "cdn" {
-  enabled = true
+  enabled             = true
+  default_root_object = "index.html"
 
   viewer_certificate {
     acm_certificate_arn      = var.acm_certificate_arn
