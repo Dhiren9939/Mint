@@ -46,12 +46,13 @@ jobs:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         run: terraform apply -no-color -input=false -auto-approve
 
-      - name: Save Terraform Outputs
+      - name: Output Resource Details
         id: tf_out
         run: |
           echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
           HOST="$(terraform output -raw db_endpoint)"
           echo "RDS_ENDPOINT=${HOST:0:-5}" >> $GITHUB_OUTPUT
+          echo "CLOUDFRONT_ID=$(terraform ouput -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
 
       - name: Update Repo Variables
         env:
@@ -59,7 +60,7 @@ jobs:
         run: |
           gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
           gh variable set RDS_ENDPOINT --body "${{ steps.tf_out.outputs.RDS_ENDPOINT }}"
-
+          gh variable set CLOUDFRONT_ID --body "${{ steps.tf_out.outputs.CLOUDFRONT_ID }}"
       - name: SCP scripts
         uses: appleboy/scp-action@v1.0.0
         with:
