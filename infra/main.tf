@@ -55,7 +55,7 @@ module "rds" {
   db_password          = var.db_password
   db_subnet_group_name = module.vpc.rds_subnet_group_name
   rds_sg_id            = module.vpc.rds_sg_id
-  db_name = var.db_name
+  db_name              = var.db_name
 }
 
 module "cloudfront" {
@@ -65,5 +65,5 @@ module "cloudfront" {
   frontend_bucket_domain_name = module.s3.frontend_bucket_domain_name
   backend_ec2_domain_name     = module.ec2.server_public_dns
   acm_certificate_arn         = var.acm_certificate_arn
-  domain_name = var.domain_name
+  domain_name                 = var.domain_name
 }
