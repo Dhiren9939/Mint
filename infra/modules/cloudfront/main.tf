@@ -6,7 +6,7 @@ resource "aws_cloudfront_distribution" "cdn" {
   custom_error_response {
     error_code         = 403
     response_code      = 404
-    response_page_path = "/index"
+    response_page_path = "/"
   }
 
   viewer_certificate {
