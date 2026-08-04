@@ -28,3 +28,16 @@ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 sudo systemctl enable --now docker
 
 sudo systemctl status docker
+
+sudo adduser springuser
+
+sudo groupadd apprunners
+
+sudo usermod -aG apprunners springuser
+
+sudo chown -R :apprunners /opt/mint-backend
+
+sudo chmod -R 750 /opt/mint-backend
+
+sudo curl -o /opt/mint-backend/config/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+
