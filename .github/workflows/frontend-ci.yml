@@ -2,6 +2,9 @@ name: frontend-ci
 
 on:
   workflow_call:
+    outputs:
+      build-id:
+        value: ${{ jobs.build.outputs.build-id }}
   workflow_dispatch:
   pull_request:
     branches: [main]
@@ -47,7 +50,7 @@ jobs:
 
       - name: Upload Build
         id: upload-build
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: frontend-build

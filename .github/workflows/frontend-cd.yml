@@ -24,6 +24,5 @@ jobs:
         with:
           artifact-ids: ${{ needs.run-ci.outputs.build-id }}
           path: /tmp/build
-      
+
       - run: ls /tmp/build
-      
