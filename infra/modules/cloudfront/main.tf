@@ -1,6 +1,7 @@
 resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   default_root_object = "index.html"
+  aliases             = ["mint.${var.domain_name}"]
 
   custom_error_response {
     error_code         = 403
