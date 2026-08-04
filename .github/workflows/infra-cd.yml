@@ -26,41 +26,42 @@ jobs:
       - uses: actions/checkout@v7
         name: Checkout Files
 
-      - uses: hashicorp/setup-terraform@v4
-        name: Setup Terraform
-        with:
-          terraform_version: "1.15.3"
+      # - uses: hashicorp/setup-terraform@v4
+      #   name: Setup Terraform
+      #   with:
+      #     terraform_version: "1.15.3"
 
-      - uses: aws-actions/configure-aws-credentials@v6
-        name: Configure AWS Credentials
-        with:
-          aws-region: ap-south-1
-          role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
+      # - uses: aws-actions/configure-aws-credentials@v6
+      #   name: Configure AWS Credentials
+      #   with:
+      #     aws-region: ap-south-1
+      #     role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
 
-      - name: Terraform Init
-        run: terraform init
+      # - name: Terraform Init
+      #   run: terraform init
 
-      - name: Terraform Apply
-        env:
-          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
-          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-        run: terraform apply -no-color -input=false -auto-approve
+      # - name: Terraform Apply
+      #   env:
+      #     TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+      #     TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      #   run: terraform apply -no-color -input=false -auto-approve
 
-      - name: Output Resource Details
-        id: tf_out
-        run: |
-          echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
-          HOST="$(terraform output -raw db_endpoint)"
-          echo "RDS_ENDPOINT=${HOST:0:-5}" >> $GITHUB_OUTPUT
-          echo "CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
+      # - name: Output Resource Details
+      #   id: tf_out
+      #   run: |
+      #     echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+      #     HOST="$(terraform output -raw db_endpoint)"
+      #     echo "RDS_ENDPOINT=${HOST:0:-5}" >> $GITHUB_OUTPUT
+      #     echo "CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
 
-      - name: Update Repo Variables
-        env:
-          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: |
-          gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
-          gh variable set RDS_ENDPOINT --body "${{ steps.tf_out.outputs.RDS_ENDPOINT }}"
-          gh variable set CLOUDFRONT_ID --body "${{ steps.tf_out.outputs.CLOUDFRONT_ID }}"
+      # - name: Update Repo Variables
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+      #   run: |
+      #     gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
+      #     gh variable set RDS_ENDPOINT --body "${{ steps.tf_out.outputs.RDS_ENDPOINT }}"
+      #     gh variable set CLOUDFRONT_ID --body "${{ steps.tf_out.outputs.CLOUDFRONT_ID }}"
+      
       - name: SCP scripts
         uses: appleboy/scp-action@v1.0.0
         with:
