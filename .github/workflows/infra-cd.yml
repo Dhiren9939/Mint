@@ -1,6 +1,7 @@
 name: infra-cd
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths: ["infra/**", "scripts/**"]
@@ -74,6 +75,6 @@ jobs:
           host: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          script: | 
+          script: |
             sudo bash /tmp/configure-server.sh
             PGPASSWORD="${{ secrets.DB_PASSWORD }}" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -f /tmp/schema.sql
