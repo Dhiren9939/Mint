@@ -45,20 +45,23 @@ jobs:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         run: terraform apply -no-color -input=false -auto-approve
 
-      - name: Save EC2 IP
-        id: ec2_ip
-        run: echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+      - name: Save Terraform Outputs
+        id: tf_out
+        run: |
+          echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+          echo "RDS_ENDPOINT=$(terraform output -raw db_endpoint)" >> $GITHUB_OUTPUT
 
-      - name: Update EC2 IP Variable
+      - name: Update Repo Variables
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          gh variable set EC2_PUBLIC_IP --body "${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP }}"
+          gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
+          gh varibale set RDS_ENDPOINT --body "${{ steps.tf_out.outputs.RDS_ENDPOINT }}"
 
       - name: SCP scripts
         uses: appleboy/scp-action@v1.0.0
         with:
-          host: ${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP}}
+          host: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP}}
           username: admin
           key: ${{ secrets.SSH_KEY }}
           source: "scripts/infra/configure-server.sh,scripts/db/schema.sql"
@@ -68,7 +71,7 @@ jobs:
       - name: Configure EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ steps.ec2_ip.outputs.EC2_PUBLIC_IP }}
+          host: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
           script: | 
