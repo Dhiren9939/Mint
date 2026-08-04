@@ -1,6 +1,7 @@
 name: frontend-ci
 
 on:
+  workflow_call:
   workflow_dispatch:
   pull_request:
     branches: [main]
@@ -13,24 +14,41 @@ jobs:
       run:
         working-directory: ./frontend
 
+    outputs:
+      build-id: ${{ steps.upload-build.outputs.artifact-id }}
+
     steps:
       - uses: actions/checkout@v7
         name: Checkout Files
+
       - uses: actions/setup-node@v7
         name: Setup Node
         with:
           node-version: "26.1.0"
+
       - uses: actions/cache@v6
         name: Warmup Cache
         with:
           path: ~/.npm
           key: nodejs-${{ hashFiles('**/package-lock.json') }}
           restore-keys: nodejs-
+
       - name: Install Dependencies
         run: npm ci
+
       - name: Lint Checks
         run: npm run lint
+
       - name: Run Tests
         run: npm test
+
       - name: Build Frontend
         run: npm run build
+
+      - name: Upload Build
+        id: upload-build
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-build
+          path: ./frontend/dist
