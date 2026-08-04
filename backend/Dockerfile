@@ -16,6 +16,8 @@ RUN addgroup -S app && adduser -S -G app app
 
 RUN mkdir -p /opt/mint-backend/config
 
+RUN mkdir -p /app
+
 RUN chown -R app:app /app /opt/mint-backend
 
 WORKDIR /app
