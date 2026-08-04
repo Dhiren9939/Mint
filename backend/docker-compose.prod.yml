@@ -2,7 +2,7 @@ name: mint-backend
 
 services:
   api:
-    image: mint-api:1.0.0
+    image: ${IMAGE_TAG:?IMAGE_TAG must be set}
     ports:
       - "80:8080"
     environment:

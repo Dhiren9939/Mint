@@ -39,14 +39,22 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set Image Tags
+        id: tags
+        run: |
+          REPO_OWNER="${{ github.repository_owner }}"
+          LOWERCASE_REPO_OWNER="${REPO_OWNER,,}"
+          echo "COMMIT_TAG=ghcr.io/$LOWERCASE_REPO_OWNER/mint-backend:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "LATEST_TAG=ghcr.io/$LOWERCASE_REPO_OWNER/mint-backend:latest" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           push: true
           context: backend
           tags: |
-            ghcr.io/${{ github.repository_owner }}/mint-backend:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/mint-backend:latest
+            ${{ steps.tags.outputs.COMMIT_TAG }}
+            ${{ steps.tags.outputs.LATEST_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
