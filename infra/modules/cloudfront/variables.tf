@@ -6,6 +6,9 @@ variable "frontend_bucket_domain_name" {
   type = string
 }
 
+variable "domain_name" {
+  type = string
+}
 
 variable "frontend_bucket_arn" {
   type = string
