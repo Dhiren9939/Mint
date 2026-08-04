@@ -1,0 +1,44 @@
+name: backend-cd
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["frontend/**"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  # run-ci:
+  #   uses: ./.github/workflows/backend-ci.yml
+
+  build-push:
+    runs-on: ubuntu-latest
+    # needs: run-ci
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Setup Docker
+        uses: docker/setup-docker-action@v5.4.0
+
+      - name: Login Docker
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: Dhiren9939
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Image
+        run: |
+          IMAGE_NAME="mint-backend:${{ github.sha }}"
+          docker build -t $IMAGE_NAME .
+          docker tag $IMAGE_NAME ghcr.io/Dhiren9939/$IMAGE_NAME
+          docker push ghcr.io/Dhiren9939/$IMAGE_NAME
+
+  # redeploy:
+  #   runs-on: ubuntu-latest
+  #   needs: build-push

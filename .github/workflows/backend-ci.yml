@@ -1,6 +1,7 @@
 name: backend-ci
 
 on:
+  workflow_call:
   workflow_dispatch:
   pull_request:
     branches: [main]
@@ -31,4 +32,3 @@ jobs:
         run: mvn clean test
       - name: Build Backend
         run: mvn package -DskipTests
-          

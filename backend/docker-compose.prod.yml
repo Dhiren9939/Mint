@@ -7,19 +7,15 @@ services:
       - "80:8080"
     environment:
       JAVA_TOOL_OPTIONS: >-
-        -Dspring.config.location=classpath:/,/app/config/
-        -XX:MaxRAMPercentage=60.0
+        -Dspring.config.location=classpath:/,/tmp/
+        -XX:MaxRAMPercentage=85.0
         -XX:InitialRAMPercentage=40.0
-        -XX:+UseContainerSupport
         -XX:+UseG1GC
     volumes:
-      - ~/Mint/backend/config:/app/config
-    build:
-      context: ./
-      tags:
-        - mint-api:1.0.0
+      - /tmp/:/tmp/
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       mint-net:
     restart:
@@ -35,6 +31,12 @@ services:
                "--maxmemory-policy", "allkeys-lru" ]
     volumes:
       - mint-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     networks:
       mint-net:
     restart:
