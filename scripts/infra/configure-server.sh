@@ -31,8 +31,13 @@ sudo systemctl status docker
 
 sudo curl -o /opt/mint-backend/config/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
-sudo groupadd apprunners
-sudo adduser springuser
+sudo getent group apprunners >/dev/null || sudo groupadd --system apprunners
+
+if ! id -u springuser >/dev/null 2>&1; then
+  sudo useradd --system --no-create-home --shell /usr/sbin/nologin \
+    --gid apprunners springuser
+fi
+
 sudo usermod -aG apprunners springuser
 sudo chown -R :apprunners /opt/mint-backend
 sudo chmod -R 750 /opt/mint-backend
