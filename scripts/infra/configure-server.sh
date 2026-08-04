@@ -29,14 +29,10 @@ sudo systemctl enable --now docker
 
 sudo systemctl status docker
 
-sudo adduser springuser
+sudo curl -o /opt/mint-backend/config/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
 sudo groupadd apprunners
-
+sudo adduser springuser
 sudo usermod -aG apprunners springuser
-
 sudo chown -R :apprunners /opt/mint-backend
-
 sudo chmod -R 750 /opt/mint-backend
-
-sudo curl -o /opt/mint-backend/config/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
