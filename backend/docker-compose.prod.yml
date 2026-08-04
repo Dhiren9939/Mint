@@ -14,7 +14,7 @@ services:
         -XX:+UseG1GC
       DB_USERNAME: ${DB_USERNAME:?DB_USERNAME must be set}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-      DB_URL: ${DB_HOST:?DB_HOST must be set}
+      DB_HOST: ${DB_HOST:?DB_HOST must be set}
     volumes:
       - /opt/mint-backend/config/:/app/config/:ro
     depends_on:

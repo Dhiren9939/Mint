@@ -16,7 +16,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -27,7 +27,7 @@ public class SecurityConfig {
 //    @Profile("!prod")
 //    public CorsConfigurationSource corsConfigurationSource(@Value("${allowed.cors.origin:}") String allowedOrigin) {
 //        CorsConfiguration config = new CorsConfiguration();
-//        config.setAllowCredentials(true); 
+//        config.setAllowCredentials(true);
 //        config.setAllowedOrigins(List.of(allowedOrigin));
 //        config.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
 //        config.setAllowedHeaders(List.of("*"));
