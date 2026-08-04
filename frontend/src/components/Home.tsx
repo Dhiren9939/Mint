@@ -11,7 +11,7 @@ function Home() {
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
                 <div className="space-y-3 text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-500/80">
-                        Dhiren9939
+                        Private file sharing
                     </p>
                     <h1 className="font-['Manrope'] text-3xl font-extrabold tracking-tight text-slate-100 sm:text-4xl">
                         Send files and text with temporary retrieval keys
