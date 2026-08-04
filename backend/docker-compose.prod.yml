@@ -6,13 +6,17 @@ services:
     ports:
       - "80:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       JAVA_TOOL_OPTIONS: >-
-        -Dspring.config.location=classpath:/,/tmp/
+        -Dspring.config.location=classpath:/,/opt/mint-backend
         -XX:MaxRAMPercentage=85.0
         -XX:InitialRAMPercentage=40.0
         -XX:+UseG1GC
+      DB_USERNAME: ${DB_USERNAME:?DB_USERNAME must be set}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      DB_URL: ${DB_URL:?DB_URL must be set}
     volumes:
-      - /tmp/:/tmp/
+      - /opt/mint-backend/:/opt/mint-backend:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -27,7 +31,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: [ "redis-server", "--save", "60", "1", "--maxmemory", "200mb",
+    command: [ "redis-server", "--save", "60", "1", "--maxmemory", "150mb",
                "--maxmemory-policy", "allkeys-lru" ]
     volumes:
       - mint-redis:/data
