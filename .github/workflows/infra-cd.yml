@@ -12,11 +12,11 @@ permissions:
   contents: read
 
 jobs:
-  # run-ci:
-  #   uses: ./.github/workflows/infra-ci.yml
+  run-ci:
+    uses: ./.github/workflows/infra-ci.yml
 
   apply:
-    # needs: run-ci
+    needs: run-ci
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -61,7 +61,7 @@ jobs:
           gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
           gh variable set RDS_ENDPOINT --body "${{ steps.tf_out.outputs.RDS_ENDPOINT }}"
           gh variable set CLOUDFRONT_ID --body "${{ steps.tf_out.outputs.CLOUDFRONT_ID }}"
-      
+
       - name: SCP scripts
         uses: appleboy/scp-action@v1.0.0
         with:
