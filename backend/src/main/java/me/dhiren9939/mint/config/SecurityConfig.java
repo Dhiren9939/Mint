@@ -23,19 +23,19 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    @Profile("!prod")
-    public CorsConfigurationSource corsConfigurationSource(@Value("${allowed.cors.origin}") String allowedOrigin) {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true);
-        config.setAllowedOrigins(List.of(allowedOrigin));
-        config.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", config);
-        return source;
-    }
+//    @Bean
+//    @Profile("!prod")
+//    public CorsConfigurationSource corsConfigurationSource(@Value("${allowed.cors.origin:}") String allowedOrigin) {
+//        CorsConfiguration config = new CorsConfiguration();
+//        config.setAllowCredentials(true); 
+//        config.setAllowedOrigins(List.of(allowedOrigin));
+//        config.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+//        config.setAllowedHeaders(List.of("*"));
+//
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        source.registerCorsConfiguration("/api/**", config);
+//        return source;
+//    }
 
     @Bean
     public RateLimitFilter rateLimitFilter(ProxyManager<String> proxyManager,
