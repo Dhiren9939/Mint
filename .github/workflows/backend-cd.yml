@@ -44,7 +44,9 @@ jobs:
         with:
           push: true
           context: backend
-          tags: ${{ github.repository_owner }}/mint-backend:${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mint-backend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/mint-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
