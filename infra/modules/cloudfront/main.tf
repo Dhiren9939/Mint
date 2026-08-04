@@ -1,6 +1,7 @@
 resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   default_root_object = "index.html"
+  aliases             = ["mint.${var.domain_name}"]
 
   viewer_certificate {
     acm_certificate_arn      = var.acm_certificate_arn
