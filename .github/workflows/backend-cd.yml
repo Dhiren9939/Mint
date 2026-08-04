@@ -102,10 +102,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: IMAGE_TAG,DB_HOST,DB_USERNAME,DB_PASSWORD
           script: |
-            echo "IMAGE_TAG=${IMAGE_TAG}" | sudo tee /opt/mint-backend/config/.env > /dev/null
-            echo "DB_HOST=${DB_HOST}" | sudo tee -a /opt/mint-backend/config/.env > /dev/null
-            echo "DB_USERNAME=${DB_USERNAME}" | sudo tee -a /opt/mint-backend/config/.env > /dev/null
-            echo "DB_PASSWORD=${DB_PASSWORD}" | sudo tee -a /opt/mint-backend/config/.env > /dev/null
+            echo $IMAGE_TAG
             sudo cp /tmp/docker-compose.prod.yml /tmp/application.properties /tmp/application-prod.properties /opt/mint-backend/config
             sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml down
             sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml up -d --pull always --remove-orphans
