@@ -103,5 +103,7 @@ jobs:
           envs: IMAGE_TAG,DB_HOST,DB_USERNAME,DB_PASSWORD
           script: |
             echo $IMAGE_TAG
-            sudo cp /tmp/docker-compose.prod.yml /tmp/applications.properties /tmp/applications-prod.properties /opt/mint-backend/config
+            sudo cp /tmp/docker-compose.prod.yml /tmp/application.properties /tmp/application-prod.properties /opt/mint-backend/config
+            sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml down
             sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml up -d --pull always --remove-orphans
+            yes | sudo docker compose image prune
