@@ -1,0 +1,17 @@
+name: create-app
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-infra-cd:
+    uses: ./.github/workflows/infra-cd.yml
+    
+  run-frontend-cd:
+    needs: run-infra-cd
+    uses: ./.github/workflows/frontend-cd.yml
+
+  run-backend-cd:
+    needs: run-infra-cd
+    uses: ./.github/workflows/backend-cd.yml
+  
