@@ -12,11 +12,11 @@ permissions:
   id-token: write
 
 jobs:
-  # run-ci:
-  #   uses: ./.github/workflows/frontend-ci.yml
+  run-ci:
+    uses: ./.github/workflows/frontend-ci.yml
 
   deploy:
-    # needs: run-ci
+    needs: run-ci
     runs-on: ubuntu-latest
 
     steps:

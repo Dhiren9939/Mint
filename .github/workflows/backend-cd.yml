@@ -68,13 +68,13 @@ jobs:
       - uses: actions/checkout@v7
         name: Pull Files
 
-      - name: Upload Compose file
+      - name: Upload Compose file & Deploy File
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ vars.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          source: "backend/docker-compose.prod.yml"
+          source: "backend/docker-compose.prod.yml,scripts/redeploy.sh"
           target: "/tmp/"
           overwrite: true
           strip_components: 1
@@ -104,7 +104,7 @@ jobs:
           envs: IMAGE_TAG,DB_HOST,DB_USERNAME,DB_PASSWORD
           script: |
             echo $IMAGE_TAG
-            sudo cp /tmp/docker-compose.prod.yml /tmp/application.properties /tmp/application-prod.properties /opt/mint-backend/config
-            sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml down
-            sudo docker compose -f /opt/mint-backend/config/docker-compose.prod.yml up -d --pull always --remove-orphans
-            yes | sudo docker image prune
+            echo $DB_HOST
+            echo $DB_PASSWORD
+            echo $DB_USERNAME
+            sudo bash /tmp/redeploy.sh
