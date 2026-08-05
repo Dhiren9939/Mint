@@ -5,13 +5,23 @@ on:
 
 jobs:
   infra-cd:
+    permissions:
+      id-token: write
+      pull-requests: write
+      contents: read
     uses: ./.github/workflows/infra-cd.yml
     
   frontend-cd:
+    permissions:
+      id-token: write
+      contents: read
     needs: infra-cd
     uses: ./.github/workflows/frontend-cd.yml
 
   backend-cd:
+    permissions:
+      contents: read
+      packages: write
     needs: infra-cd
     uses: ./.github/workflows/backend-cd.yml
   
