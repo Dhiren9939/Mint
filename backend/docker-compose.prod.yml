@@ -16,7 +16,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       DB_HOST: ${DB_HOST:?DB_HOST must be set}
     volumes:
-      - ./config/:/app/config/:ro
+      - /opt/mint-backend/config/:/app/config/:ro
     depends_on:
       redis:
         condition: service_healthy
