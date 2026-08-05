@@ -69,9 +69,9 @@ jobs:
           host: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          source: "scripts/infra/configure-server.sh,scripts/db/schema.sql"
+          source: "scripts/configure-server.sh,scripts/schema.sql"
           target: "/tmp/mint-backend/"
-          strip_components: 2
+          strip_components: 1
 
       - name: Configure EC2 & RDS
         uses: appleboy/ssh-action@v1.0.3
@@ -81,6 +81,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             sudo mkdir -p /opt/mint-backend/config/
-            sudo cp -r /tmp/mint-backend/ /opt
+            sudo cp -r /tmp/mint-backend/ /opt/
             sudo bash /opt/mint-backend/configure-server.sh
             sudo PGPASSWORD="${{ secrets.DB_PASSWORD }}" PGSSLMODE="verify-full" PGSSLROOTCERT="/opt/mint-backend/config/global-bundle.pem" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -h ${{ steps.tf_out.outputs.RDS_ENDPOINT }} -f /opt/mint-backend/schema.sql
