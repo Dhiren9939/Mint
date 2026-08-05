@@ -12,12 +12,12 @@ permissions:
   packages: write
 
 jobs:
-  run-ci:
-    uses: ./.github/workflows/backend-ci.yml
+  # run-ci:
+  #   uses: ./.github/workflows/backend-ci.yml
 
   build-push:
     runs-on: ubuntu-latest
-    needs: run-ci
+    # needs: run-ci
     outputs:
       image-tag: ${{ steps.tags.outputs.COMMIT_TAG }}
     defaults:

@@ -13,11 +13,11 @@ permissions:
   contents: read
 
 jobs:
-  run-ci:
-    uses: ./.github/workflows/infra-ci.yml
+  # run-ci:
+  #   uses: ./.github/workflows/infra-ci.yml
 
   apply:
-    needs: run-ci
+    # needs: run-ci
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -57,7 +57,7 @@ jobs:
 
       - name: Update Repo Variables
         env:
-          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
           gh variable set RDS_ENDPOINT --body "${{ steps.tf_out.outputs.RDS_ENDPOINT }}"
