@@ -13,11 +13,11 @@ permissions:
   contents: read
 
 jobs:
-  # run-ci:
-  #   uses: ./.github/workflows/infra-ci.yml
+  run-ci:
+    uses: ./.github/workflows/infra-ci.yml
 
   apply:
-    # needs: run-ci
+    needs: run-ci
     runs-on: ubuntu-latest
     defaults:
       run:
