@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-infra-cd:
+  infra-cd:
     uses: ./.github/workflows/infra-cd.yml
     
-  run-frontend-cd:
-    needs: run-infra-cd
+  frontend-cd:
+    needs: infra-cd
     uses: ./.github/workflows/frontend-cd.yml
 
-  run-backend-cd:
-    needs: run-infra-cd
+  backend-cd:
+    needs: infra-cd
     uses: ./.github/workflows/backend-cd.yml
   

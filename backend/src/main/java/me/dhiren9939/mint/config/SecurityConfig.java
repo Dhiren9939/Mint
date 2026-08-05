@@ -2,23 +2,16 @@ package me.dhiren9939.mint.config;
 
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import me.dhiren9939.mint.filter.RateLimitFilter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.util.List;
+import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 public class SecurityConfig {
