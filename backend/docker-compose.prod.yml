@@ -3,7 +3,6 @@ name: mint-backend
 services:
   api:
     image: ${IMAGE_TAG:?IMAGE_TAG must be set}
-    entrypoint: sleep 10000000
     ports:
       - "80:8080"
     environment:

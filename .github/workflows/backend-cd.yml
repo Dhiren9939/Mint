@@ -107,4 +107,4 @@ jobs:
             echo $DB_HOST
             echo $DB_PASSWORD
             echo $DB_USERNAME
-            sudo bash /tmp/redeploy.sh
+            sudo -E bash /tmp/redeploy.sh
