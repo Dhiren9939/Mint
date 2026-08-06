@@ -5,3 +5,7 @@ variable "mint_frontend" {
 variable "mint_user_files" {
   type = string
 }
+
+variable "domain_name" {
+  type = string
+}

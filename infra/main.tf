@@ -35,6 +35,7 @@ module "s3" {
   source          = "./modules/s3"
   mint_frontend   = var.mint_frontend_bucket
   mint_user_files = var.mint_user_files
+  domain_name = var.domain_name
 }
 
 module "ec2" {
