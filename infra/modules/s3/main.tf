@@ -11,7 +11,7 @@ resource "aws_s3_bucket" "user_files" {
 resource "aws_s3_bucket_cors_configuration" "user_files_cors" {
   bucket = aws_s3_bucket.user_files.id
   cors_rule {
-    allowed_methods = ["GET", "PUT"]
+    allowed_methods = ["GET", "PUT", "OPTIONS"]
     allowed_origins = ["https://mint.${var.domain_name}"]
     allowed_headers = ["Content-Length"]
   }
