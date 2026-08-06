@@ -4,7 +4,7 @@ on:
   workflow_call:
     outputs:
       build-id:
-        value: ${{ jobs.build.outputs.build-id }}
+        value: ${{ jobs.lint-test-build.outputs.build-id }}
   workflow_dispatch:
   pull_request:
     branches: [main]
