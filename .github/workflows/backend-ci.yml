@@ -8,7 +8,7 @@ on:
     paths: ["backend/**"]
 
 jobs:
-  build:
+  tests-package:
     runs-on: ubuntu-latest
     defaults:
       run:

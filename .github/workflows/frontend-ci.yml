@@ -11,7 +11,7 @@ on:
     paths: ["frontend/**"]
 
 jobs:
-  build:
+  lint-test-build:
     runs-on: ubuntu-latest
     defaults:
       run:
