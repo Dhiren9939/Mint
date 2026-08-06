@@ -46,7 +46,8 @@ resource "aws_cloudfront_distribution" "cdn" {
     target_origin_id       = "EC2-${var.backend_ec2_domain_name}"
     viewer_protocol_policy = "redirect-to-https"
     // AWS Managed Policies for Caching Optimized and Caching Disabled
-    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.api_cookies.id
   }
 
   default_cache_behavior {
@@ -89,4 +90,22 @@ resource "aws_s3_bucket_policy" "cloudfront_access" {
   })
 }
 
+resource "aws_cloudfront_origin_request_policy" "api_cookies" {
+  name = "mint-api-cookies"
 
+  cookies_config {
+    cookie_behavior = "whitelist"
+
+    cookies {
+      items = ["MINT_ID"]
+    }
+  }
+
+  headers_config {
+    header_behavior = "none"
+  }
+
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+}
