@@ -10,6 +10,7 @@ jobs:
       pull-requests: write
       contents: read
     uses: ./.github/workflows/infra-cd.yml
+    secrets: inherit
     
   frontend-cd:
     permissions:
@@ -17,6 +18,8 @@ jobs:
       contents: read
     needs: infra-cd
     uses: ./.github/workflows/frontend-cd.yml
+    secrets: inherit
+    
 
   backend-cd:
     permissions:
@@ -24,4 +27,5 @@ jobs:
       packages: write
     needs: infra-cd
     uses: ./.github/workflows/backend-cd.yml
-  
+    secrets: inherit
+    

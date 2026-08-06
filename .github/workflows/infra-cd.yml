@@ -15,6 +15,7 @@ permissions:
 jobs:
   run-ci:
     uses: ./.github/workflows/infra-ci.yml
+    secrets: inherit
 
   apply:
     needs: run-ci
