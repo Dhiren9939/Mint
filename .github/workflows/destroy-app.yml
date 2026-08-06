@@ -43,3 +43,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
           gh variable delete EC2_PUBLIC_IP
+          gh variable delete CLOUDFRONT_ID
+          gh variable delete RDS_ENDPOINT
