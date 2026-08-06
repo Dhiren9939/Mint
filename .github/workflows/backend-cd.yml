@@ -103,8 +103,4 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: IMAGE_TAG,DB_HOST,DB_USERNAME,DB_PASSWORD
           script: |
-            echo $IMAGE_TAG
-            echo $DB_HOST
-            echo $DB_PASSWORD
-            echo $DB_USERNAME
             sudo -E bash /tmp/redeploy.sh
