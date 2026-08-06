@@ -12,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.filter.CorsFilter;
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
 public class SecurityConfig {
