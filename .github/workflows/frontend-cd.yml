@@ -2,6 +2,9 @@ name: frontend-cd
 
 on:
   workflow_call:
+    inputs:
+      CLOUDFRONT_ID:
+        type: string
   workflow_dispatch:
   push:
     branches: [main]
@@ -38,4 +41,4 @@ jobs:
 
       - name: Invalidate CloudFront
         run: |
-          aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_ID }} --path /index.html
+          aws cloudfront create-invalidation --distribution-id ${{ inputs.CLOUDFRONT_ID || vars.CLOUDFRONT_ID }} --path /index.html

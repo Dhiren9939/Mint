@@ -2,6 +2,11 @@ name: backend-cd
 
 on:
   workflow_call:
+    inputs:
+      EC2_PUBLIC_IP:
+        type: string
+      RDS_ENDPOINT:
+        type: string
   workflow_dispatch:
   push:
     branches: [main]
@@ -71,7 +76,7 @@ jobs:
       - name: Upload Compose file & Deploy File
         uses: appleboy/scp-action@v1.0.0
         with:
-          host: ${{ vars.EC2_PUBLIC_IP }}
+          host: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
           source: "backend/docker-compose.prod.yml,scripts/redeploy.sh"
@@ -82,7 +87,7 @@ jobs:
       - name: Upload application properties
         uses: appleboy/scp-action@v1.0.0
         with:
-          host: ${{ vars.EC2_PUBLIC_IP }}
+          host: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
           source: "backend/src/main/resources/application.properties,backend/src/main/resources/application-prod.properties"
@@ -94,7 +99,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           IMAGE_TAG: ${{ needs.build-push.outputs.image-tag }}
-          DB_HOST: ${{ vars.RDS_ENDPOINT }}
+          DB_HOST: ${{ inputs.RDS_ENDPOINT || vars.RDS_ENDPOINT }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         with:

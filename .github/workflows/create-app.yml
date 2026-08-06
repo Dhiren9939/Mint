@@ -11,15 +11,16 @@ jobs:
       contents: read
     uses: ./.github/workflows/infra-cd.yml
     secrets: inherit
-    
+
   frontend-cd:
     permissions:
       id-token: write
       contents: read
     needs: infra-cd
     uses: ./.github/workflows/frontend-cd.yml
+    with:
+      CLOUDFRONT_ID: ${{ needs.infra-cd.outputs.CLOUDFRONT_ID }}
     secrets: inherit
-    
 
   backend-cd:
     permissions:
@@ -27,5 +28,7 @@ jobs:
       packages: write
     needs: infra-cd
     uses: ./.github/workflows/backend-cd.yml
+    with:
+      EC2_PUBLIC_IP: ${{ needs.infra-cd.outputs.EC2_PUBLIC_IP }}
+      RDS_ENDPOINT: ${{ needs.infra-cd.outputs.RDS_ENDPOINT }}
     secrets: inherit
-    
