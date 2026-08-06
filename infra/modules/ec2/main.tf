@@ -10,7 +10,10 @@ resource "aws_instance" "server" {
   associate_public_ip_address = true
   iam_instance_profile        = var.iam_role_instance_profile_name
 
-  metadata_options { http_tokens = "required" }
+  metadata_options {
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
 
   credit_specification {
     cpu_credits = "standard"
