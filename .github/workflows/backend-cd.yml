@@ -103,7 +103,7 @@ jobs:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         with:
-          host: ${{ vars.EC2_PUBLIC_IP }}
+          host: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
           envs: IMAGE_TAG,DB_HOST,DB_USERNAME,DB_PASSWORD
