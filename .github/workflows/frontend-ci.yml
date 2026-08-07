@@ -8,7 +8,10 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
-    paths: ["frontend/**"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+      - ".github/workflows/frontend-cd.yml"
 
 jobs:
   lint-test-build:

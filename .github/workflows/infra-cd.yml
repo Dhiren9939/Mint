@@ -12,19 +12,31 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["infra/**", "scripts/**"]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-ci.yml"
+      - ".github/workflows/infra-cd.yml"
+      - ".github/workflows/scripts/**"
 
-permissions:
-  id-token: write
-  pull-requests: write
-  contents: read
+
+
+concurrency:
+  group: production-infrastructure
+  cancel-in-progress: false
 
 jobs:
   run-ci:
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
     uses: ./.github/workflows/infra-ci.yml
     secrets: inherit
 
   apply:
+    permissions:
+      id-token: write
+      contents: read
     outputs:
       EC2_PUBLIC_IP: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
       RDS_ENDPOINT: ${{ steps.tf_out.outputs.RDS_ENDPOINT }}
@@ -65,7 +77,7 @@ jobs:
         run: |
           echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
           HOST="$(terraform output -raw db_endpoint)"
-          echo "RDS_ENDPOINT=${HOST:0:-5}" >> $GITHUB_OUTPUT
+          echo "RDS_ENDPOINT=${HOST%%:*}" >> $GITHUB_OUTPUT
           echo "CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
 
       - name: Update Repo Variables
@@ -82,18 +94,24 @@ jobs:
           host: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          source: "scripts/configure-server.sh,scripts/schema.sql"
+          source: ".github/workflows/scripts/configure-server.sh,.github/workflows/scripts/schema.sql"
           target: "/tmp/mint-backend/"
-          strip_components: 1
+          strip_components: 3
 
       - name: Configure EC2 & RDS
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          RDS_ENDPOINT: ${{ steps.tf_out.outputs.RDS_ENDPOINT }}
         with:
           host: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
+          envs: DB_USERNAME,DB_PASSWORD,RDS_ENDPOINT
           script: |
             sudo mkdir -p /opt/mint-backend/config/
             sudo cp -r /tmp/mint-backend/ /opt/
             sudo bash /opt/mint-backend/configure-server.sh
-            sudo PGPASSWORD="${{ secrets.DB_PASSWORD }}" PGSSLMODE="verify-full" PGSSLROOTCERT="/opt/mint-backend/config/global-bundle.pem" psql -U ${{ secrets.DB_USERNAME }} -d mintdb -h ${{ steps.tf_out.outputs.RDS_ENDPOINT }} -f /opt/mint-backend/schema.sql
+            export PGPASSWORD="$DB_PASSWORD"
+            sudo -E bash -c 'PGSSLMODE="verify-full" PGSSLROOTCERT="/opt/mint-backend/config/global-bundle.pem" psql -U "$DB_USERNAME" -d mintdb -h "$RDS_ENDPOINT" -f /opt/mint-backend/schema.sql'

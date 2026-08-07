@@ -3,6 +3,10 @@ name: create-app
 on:
   workflow_dispatch:
 
+concurrency:
+  group: production-lifecycle
+  cancel-in-progress: false
+
 jobs:
   infra-cd:
     permissions:

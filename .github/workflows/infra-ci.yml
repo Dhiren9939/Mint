@@ -5,7 +5,11 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
-    paths: ["infra/**"]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-ci.yml"
+      - ".github/workflows/infra-cd.yml"
+      - ".github/workflows/scripts/**"
 
 permissions:
   contents: read
