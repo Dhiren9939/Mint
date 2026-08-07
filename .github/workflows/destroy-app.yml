@@ -12,6 +12,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: production-lifecycle
+  cancel-in-progress: false
+
 jobs:
   destory:
     if: inputs.confirm == 'destroy'

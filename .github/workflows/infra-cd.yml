@@ -12,12 +12,20 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["infra/**", "scripts/**"]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-ci.yml"
+      - ".github/workflows/infra-cd.yml"
+      - ".github/workflows/scripts/**"
 
 permissions:
   id-token: write
   pull-requests: write
   contents: read
+
+concurrency:
+  group: production-infrastructure
+  cancel-in-progress: false
 
 jobs:
   run-ci:
@@ -82,9 +90,9 @@ jobs:
           host: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          source: "scripts/configure-server.sh,scripts/schema.sql"
+          source: ".github/workflows/scripts/configure-server.sh,.github/workflows/scripts/schema.sql"
           target: "/tmp/mint-backend/"
-          strip_components: 1
+          strip_components: 3
 
       - name: Configure EC2 & RDS
         uses: appleboy/ssh-action@v1.0.3

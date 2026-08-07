@@ -8,11 +8,18 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["frontend/**"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+      - ".github/workflows/frontend-cd.yml"
 
 permissions:
   contents: read
   id-token: write
+
+concurrency:
+  group: production-frontend
+  cancel-in-progress: false
 
 jobs:
   run-ci:
