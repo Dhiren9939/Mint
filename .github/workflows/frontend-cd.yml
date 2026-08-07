@@ -47,5 +47,7 @@ jobs:
           aws s3 sync /tmp/build s3://mint-frontend-bucket/ --delete
 
       - name: Invalidate CloudFront
+        env:
+          CLOUDFRONT_ID: ${{ inputs.CLOUDFRONT_ID || vars.CLOUDFRONT_ID }}
         run: |
-          aws cloudfront create-invalidation --distribution-id ${{ inputs.CLOUDFRONT_ID || vars.CLOUDFRONT_ID }} --path /index.html
+          aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --path /index.html
