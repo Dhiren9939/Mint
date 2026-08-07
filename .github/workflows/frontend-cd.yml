@@ -5,6 +5,7 @@ on:
     inputs:
       CLOUDFRONT_ID:
         type: string
+        required: true
   workflow_dispatch:
   push:
     branches: [main]
@@ -23,6 +24,7 @@ concurrency:
 
 jobs:
   run-ci:
+    if: inputs.CLOUDFRONT_ID != '' || vars.CLOUDFRONT_ID != ''
     uses: ./.github/workflows/frontend-ci.yml
 
   deploy:
