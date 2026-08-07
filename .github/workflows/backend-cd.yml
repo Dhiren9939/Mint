@@ -5,8 +5,10 @@ on:
     inputs:
       EC2_PUBLIC_IP:
         type: string
+        required: true
       RDS_ENDPOINT:
         type: string
+        required: true
   workflow_dispatch:
   push:
     branches: [main]
@@ -26,6 +28,7 @@ concurrency:
 
 jobs:
   run-ci:
+    if: (inputs.EC2_PUBLIC_IP != '' && inputs.RDS_ENDPOINT != '') || (vars.EC2_PUBLIC_IP != '' && vars.RDS_ENDPOINT != '')
     uses: ./.github/workflows/backend-ci.yml
 
   build-push:
