@@ -2,6 +2,11 @@ name: destory-app
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'destroy' to confirm"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -9,11 +14,12 @@ permissions:
 
 jobs:
   destory:
+    if: inputs.confirm == 'destroy'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./infra
-  
+
     steps:
       - uses: actions/checkout@v7
         name: Checkout Files

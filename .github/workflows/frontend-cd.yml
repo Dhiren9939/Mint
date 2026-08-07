@@ -37,7 +37,7 @@ jobs:
 
       - name: Sync S3
         run: |
-          aws s3 sync /tmp/build s3://mint-frontend-bucket/
+          aws s3 sync /tmp/build s3://mint-frontend-bucket/ --delete
 
       - name: Invalidate CloudFront
         run: |
