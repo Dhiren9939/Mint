@@ -22,7 +22,7 @@ public class CodeGeneratorService {
 
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public String getRandomCode() {
+    private String getRandomCode() {
         StringBuilder stringBuilder = new StringBuilder();
 
         for (int i = 0; i < codeSize; i++) {

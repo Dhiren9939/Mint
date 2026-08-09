@@ -44,7 +44,7 @@ class S3SharingServiceTest {
     void generateUploadLink_returnsResponseWithUrl() {
         when(fileStorageService.generateUploadLink(anyString(), eq("application/pdf"), eq(1024)))
                 .thenReturn("http://s3.amazonaws.com/presigned-put-url");
-        when(codeGeneratorService.getRandomCode()).thenReturn("code12");
+        when(codeGeneratorService.getUniqueFileCode()).thenReturn("code12");
 
         FileMetaData metaData = FileMetaDataBuilder.builder()
                 .fileCode("code12")
@@ -73,7 +73,7 @@ class S3SharingServiceTest {
     void generateUploadLink_handlesNoExtension() {
         when(fileStorageService.generateUploadLink(anyString(), anyString(), anyInt()))
                 .thenReturn("http://s3.amazonaws.com/upload");
-        when(codeGeneratorService.getRandomCode()).thenReturn("code12");
+        when(codeGeneratorService.getUniqueFileCode()).thenReturn("code12");
 
         FileMetaData metaData = FileMetaDataBuilder.builder()
                 .fileCode("code12")

@@ -39,7 +39,7 @@ public class S3SharingService implements FileSharingService {
         String key = "uploads/" + UUID.randomUUID() + extension;
 
         String fileUrl = fileStorageService.generateUploadLink(key, contentType, contentSize);
-        String fileCode = codeGeneratorService.getRandomCode();
+        String fileCode = codeGeneratorService.getUniqueFileCode();
 
         FileMetaData fileMetaData = fileMetaDataService.createPending(key, fileCode, duration, maxDownLoad);
         return GenerateUploadLinkResponse.of(fileUrl, fileMetaData);
