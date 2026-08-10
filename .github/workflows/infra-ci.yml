@@ -10,6 +10,7 @@ on:
       - ".github/workflows/infra-ci.yml"
       - ".github/workflows/infra-cd.yml"
       - ".github/workflows/scripts/**"
+      - ".github/actions/setup-aws-terraform/**"
 
 permissions:
   contents: read
