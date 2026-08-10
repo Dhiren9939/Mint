@@ -1,0 +1,30 @@
+name: setup-aws-terraform
+
+description: Setups the runner with AWS creds and Terraform init
+
+inputs:
+  terraform-version:
+    required: false
+    default: "1.15.3"
+  aws-region:
+    required: true
+  role-to-assume:
+    required: true
+  working-directory:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+
+    - uses: aws-actions/configure-aws-credentials@v6
+      with:
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: ${{ inputs.role-to-assume }}
+
+    - shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform init
