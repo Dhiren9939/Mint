@@ -13,7 +13,7 @@ export interface ConfirmUploadLinkResponse {
 }
 
 async function confirmUpload(fileKey: string, fileCode: string) {
-  return api.post<ApiResponse<ConfirmUploadLinkResponse>>("/api/v1/file", {
+  return api.patch<ApiResponse<ConfirmUploadLinkResponse>>("/api/v1/file", {
     fileKey,
     fileCode,
   });

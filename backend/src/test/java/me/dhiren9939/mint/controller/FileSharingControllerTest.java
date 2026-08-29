@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -130,7 +131,7 @@ class FileSharingControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/file - 200 OK on confirm upload success")
+    @DisplayName("PATCH /api/v1/file - 200 OK on confirm upload success")
     void confirmUpload_returns200OnSuccess() throws Exception {
         ConfirmUploadResponse response = new ConfirmUploadResponse(
                 "a1b2c3", LocalDateTime.now().plusHours(1), 5, FileState.READY
@@ -146,7 +147,7 @@ class FileSharingControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/file")
+        mockMvc.perform(patch("/api/v1/file")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonBody))
                 .andExpect(status().isOk())
@@ -155,7 +156,7 @@ class FileSharingControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/file - 400 Bad Request when fileCode format is invalid")
+    @DisplayName("PATCH /api/v1/file - 400 Bad Request when fileCode format is invalid")
     void confirmUpload_returns400OnInvalidFileCode() throws Exception {
         String jsonBody = """
                 {
@@ -164,7 +165,7 @@ class FileSharingControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/file")
+        mockMvc.perform(patch("/api/v1/file")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonBody))
                 .andExpect(status().isBadRequest())
@@ -172,7 +173,7 @@ class FileSharingControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/file - 404 Not Found when metadata does not exist")
+    @DisplayName("PATCH /api/v1/file - 404 Not Found when metadata does not exist")
     void confirmUpload_returns404WhenNotFound() throws Exception {
         when(fileSharingService.confirmUpload(anyString(), anyString()))
                 .thenThrow(new FileMetaDataNotFoundException("Invalid metadata information. File not Found."));
@@ -184,7 +185,7 @@ class FileSharingControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/file")
+        mockMvc.perform(patch("/api/v1/file")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonBody))
                 .andExpect(status().isNotFound())

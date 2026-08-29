@@ -48,7 +48,7 @@ public class FileSharingController {
         return ApiResponse.of(uploadLink).toResponseEntity(201);
     }
 
-    @PostMapping("/file")
+    @PatchMapping("/file")
     @Operation(summary = "Notify the server after upload complete.",
             description = "This endpoint must be called after the upload is complete." +
                     " The server then makes the necessary updates to serve the file. " +

@@ -7,7 +7,7 @@ vi.mock("../index", async () => {
   return {
     ...actual,
     default: {
-      post: vi.fn(),
+      patch: vi.fn(),
     },
   };
 });
@@ -29,11 +29,11 @@ describe("confirmUpload API", () => {
         },
       },
     };
-    vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
+    vi.mocked(api.patch).mockResolvedValueOnce(mockResponse);
 
     const result = await confirmUpload("uploads/key.txt", "a1b2c3");
 
-    expect(api.post).toHaveBeenCalledWith("/api/v1/file", {
+    expect(api.patch).toHaveBeenCalledWith("/api/v1/file", {
       fileKey: "uploads/key.txt",
       fileCode: "a1b2c3",
     });
