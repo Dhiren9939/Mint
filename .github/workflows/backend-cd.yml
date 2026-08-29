@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   run-ci:
-    if: (inputs.EC2_PUBLIC_IP != '' && inputs.RDS_ENDPOINT != '') || (vars.EC2_PUBLIC_IP != '' && vars.RDS_ENDPOINT != '')
+    if: vars.CICD_ENABLED != 'false' && ((inputs.EC2_PUBLIC_IP != '' && inputs.RDS_ENDPOINT != '') || (vars.EC2_PUBLIC_IP != '' && vars.RDS_ENDPOINT != ''))
     uses: ./.github/workflows/backend-ci.yml
 
   build-push:

@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   run-ci:
+    if: vars.CICD_ENABLED != 'false'
     permissions:
       id-token: write
       contents: read

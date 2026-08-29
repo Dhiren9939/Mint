@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   run-ci:
-    if: inputs.CLOUDFRONT_ID != '' || vars.CLOUDFRONT_ID != ''
+    if: vars.CICD_ENABLED != 'false' && (inputs.CLOUDFRONT_ID != '' || vars.CLOUDFRONT_ID != '')
     uses: ./.github/workflows/frontend-ci.yml
 
   deploy:
