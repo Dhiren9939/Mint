@@ -7,25 +7,23 @@ interface NavbarProps {
 
 function Navbar({ onAboutClick }: NavbarProps) {
   return (
-    <nav className="flex w-full items-center justify-between px-5 pb-6 pt-8 sm:pb-4 font-['Manrope'] animate-slide-down">
-      <a href="/" className="group flex items-center gap-2 no-underline">
-        <img
-          src={logo}
-          className="h-7 transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-110"
-          alt="Mint logo"
-        />
-        <span className="text-3xl text-emerald-500 font-bold tracking-tight">
-          Mint
-        </span>
-      </a>
+    <nav className="border-b border-line">
+      <div className="mx-auto flex w-full max-w-[620px] items-center justify-between px-5 py-5">
+        <a href="/" className="flex items-center gap-2 no-underline">
+          <img src={logo} className="h-5 w-5" alt="Mint logo" />
+          <span className="text-lg font-semibold tracking-tight text-chalk">
+            Mint
+          </span>
+        </a>
 
-      <button
-        onClick={onAboutClick}
-        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-all duration-300 cursor-pointer"
-      >
-        <Info size={16} />
-        <span>About</span>
-      </button>
+        <button
+          onClick={onAboutClick}
+          className="flex cursor-pointer items-center gap-1.5 rounded-[4px] px-2 py-1.5 text-sm text-mist transition-colors duration-150 hover:text-chalk"
+        >
+          <Info size={15} />
+          <span>About</span>
+        </button>
+      </div>
     </nav>
   );
 }

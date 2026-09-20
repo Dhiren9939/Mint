@@ -1,7 +1,6 @@
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import {
   Clock,
-  DownloadCloud,
   File as FileIcon,
   Upload,
   Pencil,
@@ -9,7 +8,7 @@ import {
   CornerDownLeft,
   Copy,
 } from "lucide-react";
-import GlassCard from "./GlassCard";
+import Panel from "./Panel";
 import Dropzone from "react-dropzone";
 import { type ExpiryDuration } from "../api";
 import getUploadLink from "../api/getUploadLink";
@@ -34,11 +33,11 @@ function ExpiryOption({
   return (
     <button
       onClick={() => handleOptionClick(index)}
-      className={`${
+      className={`w-12 cursor-pointer rounded-[4px] py-1.5 text-center font-mono text-sm transition-colors duration-150 ${
         activeIndex === index
-          ? "bg-emerald-500 text-slate-800 shadow-md scale-105"
-          : "bg-slate-700/30 text-slate-300 hover:bg-slate-700/60 hover:text-emerald-400"
-      } p-2 w-14 text-center rounded-md cursor-pointer transition-all duration-200 ease-in-out`}
+          ? "bg-mint text-ink"
+          : "bg-inset text-mist hover:text-chalk"
+      }`}
     >
       {duration}
     </button>
@@ -57,12 +56,6 @@ function SendContent() {
     return num;
   }
 
-  const localDownloadCount = checkAndReturn(
-    localStorage.getItem("downloadCount"),
-    1,
-    100,
-    100,
-  );
   const localActiveIndex = checkAndReturn(
     localStorage.getItem("activeIndex"),
     0,
@@ -70,8 +63,6 @@ function SendContent() {
     2,
   );
 
-  const [downloadCount, setDownloadCount] =
-    useState<number>(localDownloadCount);
   const [activeIndex, setActiveIndex] = useState<number>(localActiveIndex);
   const activeIndexToExpiry: ExpiryDuration[] = [
     "MINUTES15",
@@ -98,31 +89,9 @@ function SendContent() {
     setFileCode("");
   }
 
-  function handleSlider(e: ChangeEvent<HTMLInputElement>) {
-    setDownloadCount(Number(e.target.value));
-    localStorage.setItem("downloadCount", e.target.value);
-  }
   function handleOptionClick(index: number) {
     setActiveIndex(index);
     localStorage.setItem("activeIndex", String(index));
-  }
-
-  function handleUnfocus(e: ChangeEvent<HTMLInputElement>) {
-    if (Number(e.target.value) < 1) {
-      setDownloadCount(100);
-      localStorage.setItem("downloadCount", e.target.value);
-    }
-  }
-
-  function handleInputChange(e: ChangeEvent<HTMLInputElement>) {
-    const newValue = e.target.value;
-    if (newValue === "" || /^\d+$/.test(newValue)) {
-      const numValue = newValue === "" ? 0 : Number(newValue);
-      if (numValue <= 100 && numValue >= 0) {
-        setDownloadCount(numValue);
-        localStorage.setItem("downloadCount", String(numValue));
-      }
-    }
   }
 
   async function handleUpload() {
@@ -132,15 +101,10 @@ function SendContent() {
     }
 
     const expiryDuration: ExpiryDuration = activeIndexToExpiry[activeIndex];
-    const maxDownload = downloadCount;
 
     const toastId = toast.loading("Uploading file...");
     try {
-      const uploadLinkRes = await getUploadLink(
-        file,
-        expiryDuration,
-        maxDownload,
-      );
+      const uploadLinkRes = await getUploadLink(file, expiryDuration);
       if (!uploadLinkRes.data.data) throw new Error("Failed to upload file.");
 
       const {
@@ -186,23 +150,18 @@ function SendContent() {
   }
 
   return (
-    <div className="animate-fade-in-up">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 text-slate-300">
-        <GlassCard>
+    <div className="animate-fade-up">
+      <div className="flex flex-col gap-5">
+        <Panel>
           <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Upload
-              </p>
-              <h2 className="font-['Manrope'] text-xl font-bold text-slate-100">
-                {isTextMode ? "Share text as a file" : "Choose what to send"}
-              </h2>
-            </div>
+            <h2 className="text-lg font-semibold text-chalk">
+              {isTextMode ? "Share text as a file" : "Choose what to send"}
+            </h2>
             {!isTextMode && !file && (
               <button
                 type="button"
                 onClick={() => setIsTextMode(true)}
-                className="rounded-xl border border-slate-700 bg-slate-800/40 px-3 py-2 text-xs font-medium text-emerald-400 transition-colors duration-200 hover:bg-slate-700/60"
+                className="cursor-pointer rounded-[4px] border border-line px-3 py-1.5 text-xs text-mist transition-colors duration-150 hover:text-chalk"
               >
                 Share text instead
               </button>
@@ -210,22 +169,22 @@ function SendContent() {
           </div>
 
           {isTextMode ? (
-            <div className="flex min-h-[320px] flex-col gap-4 rounded-2xl border border-emerald-500/25 bg-slate-900/50 p-5">
+            <div className="flex min-h-[280px] flex-col gap-4 rounded-[4px] border border-line bg-inset p-5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-emerald-500">
-                  <Pencil size={18} />
-                  <span className="text-sm font-semibold">Text Content</span>
+                <div className="flex items-center gap-2 text-mint">
+                  <Pencil size={16} />
+                  <span className="text-sm font-medium">Text content</span>
                 </div>
                 <button
                   onClick={() => setIsTextMode(false)}
-                  className="flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-300"
+                  className="flex cursor-pointer items-center gap-1 text-xs text-mist transition-colors duration-150 hover:text-chalk"
                 >
-                  <ChevronLeft size={14} /> Back to file upload
+                  <ChevronLeft size={13} /> Back to file upload
                 </button>
               </div>
               <textarea
                 autoFocus
-                className="custom-scrollbar min-h-[220px] w-full flex-1 resize-none rounded-xl border border-slate-700/70 bg-slate-900/40 p-4 text-base text-slate-200 outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-500/40"
+                className="custom-scrollbar min-h-[180px] w-full flex-1 resize-none rounded-[4px] border border-line bg-ink p-4 text-sm text-chalk outline-none placeholder:text-mist/60"
                 placeholder="Type or paste your content here..."
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
@@ -237,16 +196,14 @@ function SendContent() {
                 }}
               />
 
-              <div className="mt-auto flex justify-end border-t border-slate-700/50 pt-3">
+              <div className="mt-auto flex justify-end border-t border-line pt-3">
                 <button
                   onClick={convertTextToFile}
                   disabled={!textContent.trim()}
-                  className="cursor-pointer rounded-xl bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-400 transition-all duration-200 hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-500/10"
+                  className="flex cursor-pointer items-center gap-2 rounded-[4px] px-4 py-2 text-sm font-medium text-mint transition-colors duration-150 hover:text-chalk disabled:cursor-not-allowed disabled:text-mist"
                 >
-                  <span className="flex items-center gap-2">
-                    <CornerDownLeft size={16} />
-                    Convert to File
-                  </span>
+                  <CornerDownLeft size={15} />
+                  Convert to file
                 </button>
               </div>
             </div>
@@ -261,46 +218,37 @@ function SendContent() {
               {({ getRootProps, getInputProps, isDragActive }) => (
                 <div
                   {...getRootProps()}
-                  className={`group w-full cursor-pointer rounded-2xl border-2 border-dashed px-5 py-14 text-center transition-all duration-300 ${
+                  className={`w-full cursor-pointer rounded-[4px] border border-dashed px-5 py-12 text-center transition-colors duration-150 ${
                     isDragActive
-                      ? "scale-[1.01] border-emerald-500 bg-emerald-500/10 shadow-[0_0_24px_rgba(16,185,129,0.18)]"
-                      : "border-slate-700 bg-slate-800/30 hover:border-emerald-500/50 hover:bg-slate-800/60"
+                      ? "border-mint bg-inset"
+                      : "border-line bg-panel hover:border-mist"
                   }`}
                 >
                   <input {...getInputProps()} />
 
-                  <div
-                    className={`mx-auto mb-4 flex w-fit items-center justify-center rounded-2xl bg-slate-800 p-3 transition-transform duration-300 ${
-                      isDragActive
-                        ? "scale-110 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                        : "group-hover:scale-110"
-                    }`}
-                  >
+                  <div className="mx-auto mb-3 flex w-fit items-center justify-center">
                     {file ? (
-                      <FileIcon stroke="#10b981" />
+                      <FileIcon size={22} stroke="#00bc7d" />
                     ) : (
-                      <Upload stroke="#10b981" />
+                      <Upload size={22} stroke="#00bc7d" />
                     )}
                   </div>
 
-                  <h2 className="text-xl font-semibold text-slate-200">
+                  <h3 className="text-base font-medium text-chalk">
                     {isDragActive
                       ? "Release to drop"
                       : file
                         ? file.name
-                        : "Drop your file here"}
-                  </h2>
+                        : "Drop a file here"}
+                  </h3>
 
                   {!file ? (
-                    <p className="mt-2 text-sm text-slate-400">
-                      Drag and drop or{" "}
-                      <span className="font-medium text-emerald-500">
-                        browse your computer
-                      </span>
+                    <p className="mt-1.5 text-sm text-mist">
+                      or <span className="text-mint">choose one</span>
                     </p>
                   ) : (
-                    <p className="mt-2 text-sm text-slate-400">
-                      File Size: {Math.ceil(file.size / 1024)} KB
+                    <p className="mt-1.5 font-mono text-sm text-mist">
+                      {Math.ceil(file.size / 1024)} KB
                     </p>
                   )}
 
@@ -312,7 +260,7 @@ function SendContent() {
                         setFile(undefined);
                         setFileCode("");
                       }}
-                      className="mt-4 text-sm font-medium text-rose-400 transition-colors hover:text-rose-300 hover:underline"
+                      className="mt-3 text-sm text-ember transition-colors duration-150 hover:text-chalk"
                     >
                       Clear file
                     </button>
@@ -321,57 +269,24 @@ function SendContent() {
               )}
             </Dropzone>
           )}
-        </GlassCard>
+        </Panel>
 
-        <GlassCard>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <Clock stroke="#10b981" height={"1.25rem"} width={"1.25rem"} />
-                <span className="text-sm font-semibold text-slate-300">
-                  Expiry Duration
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {["15m", "30m", "1hr", "24hr"].map((time, idx) => (
-                  <ExpiryOption
-                    key={time}
-                    duration={time}
-                    index={idx}
-                    activeIndex={activeIndex}
-                    handleOptionClick={handleOptionClick}
-                  />
-                ))}
-              </div>
+        <Panel>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-mist">
+              <Clock size={16} stroke="#8b9e96" />
+              Expires in
             </div>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <DownloadCloud
-                  stroke="#10b981"
-                  height={"1.25rem"}
-                  width={"1.25rem"}
+            <div className="flex items-center gap-2">
+              {["15m", "30m", "1hr", "24hr"].map((time, idx) => (
+                <ExpiryOption
+                  key={time}
+                  duration={time}
+                  index={idx}
+                  activeIndex={activeIndex}
+                  handleOptionClick={handleOptionClick}
                 />
-                <span className="text-sm font-semibold text-slate-300">
-                  Download Limit
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-700 accent-emerald-500"
-                  type="range"
-                  min={1}
-                  max={100}
-                  value={downloadCount}
-                  onChange={handleSlider}
-                ></input>
-                <input
-                  className="w-14 rounded-md bg-slate-700/30 p-2 text-center text-emerald-400 transition-colors duration-200 hover:bg-slate-700/50 focus:bg-slate-700/70 focus:outline-none"
-                  type="numeric"
-                  value={downloadCount}
-                  onChange={handleInputChange}
-                  onBlur={handleUnfocus}
-                ></input>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -379,20 +294,21 @@ function SendContent() {
             <button
               onClick={handleUpload}
               disabled={!file}
-              className="flex w-full cursor-pointer justify-center gap-2 rounded-xl bg-emerald-500 py-4 font-semibold text-slate-900 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[4px] bg-mint py-3.5 text-sm font-semibold text-ink transition-colors duration-150 hover:bg-mint/90 disabled:cursor-not-allowed disabled:bg-inset disabled:text-mist"
             >
-              <Upload />
-              Upload File
+              <Upload size={17} />
+              Upload file
             </button>
           </div>
 
           {fileCode && (
-            <div className="animate-slide-down mt-5 flex w-full flex-col items-center gap-3 rounded-xl border border-emerald-500/30 bg-slate-900/50 p-4">
-              <p className="text-sm text-slate-400">
-                Your file is ready. Use this code to download it:
-              </p>
-              <div className="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800 px-6 py-3">
-                <span className="font-mono text-2xl font-bold tracking-widest text-emerald-400">
+            <div
+              aria-live="polite"
+              className="mt-5 flex w-full flex-col items-center gap-2 rounded-[4px] border border-line bg-inset p-5 text-center"
+            >
+              <p className="text-sm text-mist">Your code</p>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[2.5rem] leading-none tracking-[0.15em] text-mint">
                   {fileCode}
                 </span>
                 <button
@@ -400,15 +316,18 @@ function SendContent() {
                     navigator.clipboard.writeText(fileCode);
                     toast.success("Code copied!");
                   }}
-                  className="rounded-md p-2 text-slate-400 transition-colors hover:bg-slate-700/50 hover:text-emerald-400"
+                  className="cursor-pointer rounded-[4px] p-2 text-mist transition-colors duration-150 hover:text-chalk"
                   title="Copy code"
                 >
-                  <Copy size={20} />
+                  <Copy size={18} />
                 </button>
               </div>
+              <p className="text-sm text-mist">
+                Anyone with this code can download the file.
+              </p>
             </div>
           )}
-        </GlassCard>
+        </Panel>
       </div>
     </div>
   );

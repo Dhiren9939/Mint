@@ -24,7 +24,6 @@ describe("confirmUpload API", () => {
         data: {
           fileCode: "a1b2c3",
           expiresAt: "2026-07-26T20:00:00",
-          maxDownloadCount: 5,
           fileState: "READY",
         },
       },

@@ -26,7 +26,6 @@ describe("getUploadLink API", () => {
           fileCode: "a1b2c3",
           fileKey: "uploads/key.txt",
           expiresAt: "2026-07-26T20:00:00",
-          maxDownloadCount: 5,
           fileState: "PENDING",
         },
       },
@@ -36,14 +35,13 @@ describe("getUploadLink API", () => {
     const dummyFile = new File(["hello world"], "hello.txt", {
       type: "text/plain",
     });
-    const result = await getUploadLink(dummyFile, ExpiryDuration.MINUTES15, 5);
+    const result = await getUploadLink(dummyFile, ExpiryDuration.MINUTES15);
 
     expect(api.post).toHaveBeenCalledWith("/api/v1/file/upload", {
       fileName: "hello.txt",
       contentType: "application/octet-stream",
       contentSize: 11,
       expiryDuration: "MINUTES15",
-      maxDownloadCount: 5,
     });
     expect(result).toEqual(mockResponse);
   });

@@ -24,8 +24,6 @@ describe("getDownloadLink API", () => {
         data: {
           fileUrl: "http://s3.download.url",
           expiresAt: "2026-07-26T20:00:00",
-          downloadCount: 1,
-          maxDownloadCount: 5,
         },
       },
     };
