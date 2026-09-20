@@ -1,7 +1,6 @@
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import {
   Clock,
-  DownloadCloud,
   File as FileIcon,
   Upload,
   Pencil,
@@ -57,12 +56,6 @@ function SendContent() {
     return num;
   }
 
-  const localDownloadCount = checkAndReturn(
-    localStorage.getItem("downloadCount"),
-    1,
-    100,
-    100,
-  );
   const localActiveIndex = checkAndReturn(
     localStorage.getItem("activeIndex"),
     0,
@@ -70,8 +63,6 @@ function SendContent() {
     2,
   );
 
-  const [downloadCount, setDownloadCount] =
-    useState<number>(localDownloadCount);
   const [activeIndex, setActiveIndex] = useState<number>(localActiveIndex);
   const activeIndexToExpiry: ExpiryDuration[] = [
     "MINUTES15",
@@ -98,31 +89,9 @@ function SendContent() {
     setFileCode("");
   }
 
-  function handleSlider(e: ChangeEvent<HTMLInputElement>) {
-    setDownloadCount(Number(e.target.value));
-    localStorage.setItem("downloadCount", e.target.value);
-  }
   function handleOptionClick(index: number) {
     setActiveIndex(index);
     localStorage.setItem("activeIndex", String(index));
-  }
-
-  function handleUnfocus(e: ChangeEvent<HTMLInputElement>) {
-    if (Number(e.target.value) < 1) {
-      setDownloadCount(100);
-      localStorage.setItem("downloadCount", e.target.value);
-    }
-  }
-
-  function handleInputChange(e: ChangeEvent<HTMLInputElement>) {
-    const newValue = e.target.value;
-    if (newValue === "" || /^\d+$/.test(newValue)) {
-      const numValue = newValue === "" ? 0 : Number(newValue);
-      if (numValue <= 100 && numValue >= 0) {
-        setDownloadCount(numValue);
-        localStorage.setItem("downloadCount", String(numValue));
-      }
-    }
   }
 
   async function handleUpload() {
@@ -132,15 +101,10 @@ function SendContent() {
     }
 
     const expiryDuration: ExpiryDuration = activeIndexToExpiry[activeIndex];
-    const maxDownload = downloadCount;
 
     const toastId = toast.loading("Uploading file...");
     try {
-      const uploadLinkRes = await getUploadLink(
-        file,
-        expiryDuration,
-        maxDownload,
-      );
+      const uploadLinkRes = await getUploadLink(file, expiryDuration);
       if (!uploadLinkRes.data.data) throw new Error("Failed to upload file.");
 
       const {
@@ -308,49 +272,21 @@ function SendContent() {
         </Panel>
 
         <Panel>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-mist">
-                <Clock size={16} stroke="#8b9e96" />
-                Expires in
-              </div>
-              <div className="flex items-center gap-2">
-                {["15m", "30m", "1hr", "24hr"].map((time, idx) => (
-                  <ExpiryOption
-                    key={time}
-                    duration={time}
-                    index={idx}
-                    activeIndex={activeIndex}
-                    handleOptionClick={handleOptionClick}
-                  />
-                ))}
-              </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-mist">
+              <Clock size={16} stroke="#8b9e96" />
+              Expires in
             </div>
-
-            <div className="h-px bg-line" />
-
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-mist">
-                <DownloadCloud size={16} stroke="#8b9e96" />
-                Download limit
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  className="h-1 w-32 cursor-pointer appearance-none rounded-full bg-line accent-mint"
-                  type="range"
-                  min={1}
-                  max={100}
-                  value={downloadCount}
-                  onChange={handleSlider}
-                ></input>
-                <input
-                  className="w-12 rounded-[4px] bg-inset p-1.5 text-center font-mono text-sm text-chalk focus:outline-none"
-                  type="numeric"
-                  value={downloadCount}
-                  onChange={handleInputChange}
-                  onBlur={handleUnfocus}
-                ></input>
-              </div>
+            <div className="flex items-center gap-2">
+              {["15m", "30m", "1hr", "24hr"].map((time, idx) => (
+                <ExpiryOption
+                  key={time}
+                  duration={time}
+                  index={idx}
+                  activeIndex={activeIndex}
+                  handleOptionClick={handleOptionClick}
+                />
+              ))}
             </div>
           </div>
 

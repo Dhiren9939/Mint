@@ -6,7 +6,6 @@ import api, {
 
 export interface GenerateUploadLinkRequest {
   expiryDuration: ExpiryDuration;
-  maxDownload: number;
   fileName: string;
   contentType: string;
   contentSize: number;
@@ -17,15 +16,10 @@ export interface GenerateUploadLinkResponse {
   fileCode: string;
   fileKey: string;
   expiresAt: string;
-  maxDownloadCount: number;
   fileState: FileState;
 }
 
-async function getUploadLink(
-  file: File,
-  expiryDuration: ExpiryDuration,
-  maxDownloadCount: number,
-) {
+async function getUploadLink(file: File, expiryDuration: ExpiryDuration) {
   return api.post<ApiResponse<GenerateUploadLinkResponse>>(
     "/api/v1/file/upload",
     {
@@ -33,7 +27,6 @@ async function getUploadLink(
       contentType: "application/octet-stream",
       contentSize: file.size,
       expiryDuration,
-      maxDownloadCount,
     },
   );
 }

@@ -8,7 +8,6 @@ export interface ConfirmUploadLinkRequest {
 export interface ConfirmUploadLinkResponse {
   fileCode: string;
   expiresAt: string;
-  maxDownloadCount: string;
   fileState: FileState;
 }
 

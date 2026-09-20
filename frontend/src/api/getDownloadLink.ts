@@ -3,8 +3,6 @@ import api, { type ApiResponse } from "./index";
 export interface GetDownloadLinkResponse {
   fileUrl: string;
   expiresAt: string;
-  dowloadCount: number;
-  maxDownloadCount: number;
 }
 
 async function getDownloadLink(fileCode: string) {
