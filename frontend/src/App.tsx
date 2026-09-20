@@ -29,19 +29,17 @@ function App() {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden font-['Inter'] text-slate-100">
-      <div className="ambient-bg" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-linear-to-b from-emerald-500/6 via-transparent to-transparent" />
-      <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 sm:px-6 lg:px-10">
-        <Navbar onAboutClick={() => setAboutOpen(true)} />
-        <main className="flex-1 pb-12 pt-2 sm:pt-6">
+    <div className="flex min-h-screen flex-col bg-ink text-chalk">
+      <Navbar onAboutClick={() => setAboutOpen(true)} />
+      <main className="flex-1 px-5 py-10 sm:py-14">
+        <div className="mx-auto w-full max-w-[620px]">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </main>
+      <Footer />
       <About isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
       <Toast isMobile={isMobile} />
     </div>

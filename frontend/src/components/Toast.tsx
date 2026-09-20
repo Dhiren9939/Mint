@@ -10,43 +10,42 @@ function Toast({ isMobile }: ToastProps) {
       position={isMobile ? "bottom-center" : "top-right"}
       toastOptions={{
         style: {
-          borderRadius: "12px",
-          background: "#1e293b",
-          color: "#e2e8f0",
-          border: "1px solid #334155",
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.3)",
+          borderRadius: "4px",
+          background: "#111a17",
+          color: "#e8f0ec",
+          border: "1px solid #223029",
         },
         success: {
           style: {
-            background: "#1e293b",
-            border: "1px solid #10b981",
-            color: "#34d399",
+            background: "#111a17",
+            border: "1px solid #00bc7d",
+            color: "#e8f0ec",
           },
           iconTheme: {
-            primary: "#10b981",
-            secondary: "#1e293b",
+            primary: "#00bc7d",
+            secondary: "#111a17",
           },
         },
         error: {
           style: {
-            background: "#1e293b",
-            border: "1px solid #f43f5e",
-            color: "#fb7185",
+            background: "#111a17",
+            border: "1px solid #e2564b",
+            color: "#e8f0ec",
           },
           iconTheme: {
-            primary: "#f43f5e",
-            secondary: "#1e293b",
+            primary: "#e2564b",
+            secondary: "#111a17",
           },
         },
         loading: {
           style: {
-            background: "#1e293b",
-            border: "1px solid #334155",
-            color: "#e2e8f0",
+            background: "#111a17",
+            border: "1px solid #223029",
+            color: "#e8f0ec",
           },
           iconTheme: {
-            primary: "#10b981",
-            secondary: "#1e293b",
+            primary: "#00bc7d",
+            secondary: "#111a17",
           },
         },
       }}

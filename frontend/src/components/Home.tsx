@@ -7,22 +7,19 @@ function Home() {
     const [isSend, setIsSend] = useState(true);
 
     return (
-        <section className="animate-fade-in-up">
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-                <div className="space-y-3 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-500/80">
-                        Private file sharing
-                    </p>
-                    <h1 className="font-['Manrope'] text-3xl font-extrabold tracking-tight text-slate-100 sm:text-4xl">
+        <section className="animate-fade-up">
+            <div className="flex flex-col gap-8">
+                <div className="space-y-2">
+                    <h1 className="text-[clamp(1.75rem,4vw,2.25rem)] font-semibold leading-tight tracking-tight text-chalk">
                         Send files and text with temporary retrieval keys
                     </h1>
-                    <p className="mx-auto max-w-2xl text-sm text-slate-400 sm:text-base">
-                        Keep it fast and anonymous. Upload once, share a code,
-                        and let links expire automatically.
+                    <p className="max-w-[62ch] text-sm leading-relaxed text-mist sm:text-base">
+                        No account, no trace. Upload once, share a six-character
+                        code, and let the link expire on its own.
                     </p>
                 </div>
 
-                <div className="grid items-start gap-6 lg:grid-cols-[220px_1fr]">
+                <div className="flex flex-col gap-6">
                     <SendReceiveButton isSend={isSend} setIsSend={setIsSend} />
                     <div>{isSend ? <SendCard /> : <RecieveCard />}</div>
                 </div>
