@@ -9,8 +9,6 @@ public class FileMetaDataBuilder {
     private String fileCode;
     private String fileKey;
     private LocalDateTime cleanAt;
-    private int downloadCount = 0;
-    private int maxDownloadCount = 100;
     private FileState fileState = FileState.PENDING;
     private ExpiryDuration fileExpiryDuration;
 
@@ -35,16 +33,6 @@ public class FileMetaDataBuilder {
 
     public FileMetaDataBuilder cleanAt(LocalDateTime cleanAt) {
         this.cleanAt = cleanAt;
-        return this;
-    }
-
-    public FileMetaDataBuilder downloadCount(int downloadCount) {
-        this.downloadCount = downloadCount;
-        return this;
-    }
-
-    public FileMetaDataBuilder maxDownloadCount(int maxDownloadCount) {
-        this.maxDownloadCount = maxDownloadCount;
         return this;
     }
 
@@ -74,8 +62,6 @@ public class FileMetaDataBuilder {
                 fileCode,
                 fileKey,
                 cleanAt,
-                downloadCount,
-                maxDownloadCount,
                 fileState,
                 fileExpiryDuration);
     }

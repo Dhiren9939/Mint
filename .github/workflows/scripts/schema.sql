@@ -3,8 +3,6 @@ CREATE TABLE IF NOT EXISTS file_meta_data (
     file_code VARCHAR(255) NOT NULL UNIQUE,
     file_key VARCHAR(255) NOT NULL UNIQUE,
     clean_at TIMESTAMP NULL,
-    download_count INT NOT NULL DEFAULT 0,
-    max_download_count INT NOT NULL DEFAULT 100,
     file_state VARCHAR(255) NOT NULL DEFAULT 'PENDING',
     file_expiry_duration VARCHAR(255) NULL
 );

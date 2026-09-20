@@ -7,7 +7,7 @@ import me.dhiren9939.mint.exception.FileCodeGenerationFailure;
 import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
 
 public interface FileSharingService {
-    GenerateUploadLinkResponse generateUploadLink(ExpiryDuration duration, int maxDownLoad, String fileName, String contentType, int contentSize) throws FileCodeGenerationFailure;
+    GenerateUploadLinkResponse generateUploadLink(ExpiryDuration duration, String fileName, String contentType, int contentSize) throws FileCodeGenerationFailure;
 
     ConfirmUploadResponse confirmUpload(String key, String fileCode) throws FileMetaDataNotFoundException;
 

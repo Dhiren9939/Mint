@@ -18,20 +18,12 @@ public record GenerateDownloadLinkResponse(
                 description = "The timestamp when the file record itself will be purged from the system.",
                 example = "2026-03-30T14:30:00"
         )
-        LocalDateTime expiresAt,
-
-        @Schema(description = "The number of times this file has already been downloaded.", example = "2")
-        int downloadCount,
-
-        @Schema(description = "The maximum number of downloads allowed for this file.", example = "10")
-        int maxDownloadCount) {
+        LocalDateTime expiresAt) {
 
     public static GenerateDownloadLinkResponse of(String fileUrl, FileMetaData fileMetaData){
         return new GenerateDownloadLinkResponse(
                 fileUrl,
-                fileMetaData.getCleanAt(),
-                fileMetaData.getDownloadCount(),
-                fileMetaData.getMaxDownloadCount()
+                fileMetaData.getCleanAt()
         );
     }
 }

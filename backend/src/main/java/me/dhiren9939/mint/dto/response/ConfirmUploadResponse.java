@@ -16,9 +16,6 @@ public record ConfirmUploadResponse(
                 example = "2024-12-31T23:59:59")
         LocalDateTime expiresAt,
 
-        @Schema(description = "The total number of times this file is allowed to be downloaded.", example = "10")
-        int maxDownloadCount,
-
         @Schema(description = "The current lifecycle state of the file.", example = "READY")
         FileState fileState) {
 
@@ -26,7 +23,6 @@ public record ConfirmUploadResponse(
         return new ConfirmUploadResponse(
                 fileMetaData.getFileCode(),
                 fileMetaData.getCleanAt(),
-                fileMetaData.getMaxDownloadCount(),
                 fileMetaData.getFileState()
         );
     }

@@ -27,7 +27,6 @@ public class S3SharingService implements FileSharingService {
     @Override
     public GenerateUploadLinkResponse generateUploadLink(
             ExpiryDuration duration,
-            int maxDownLoad,
             String fileName,
             String contentType,
             int contentSize) throws FileCodeGenerationFailure {
@@ -41,7 +40,7 @@ public class S3SharingService implements FileSharingService {
         String fileUrl = fileStorageService.generateUploadLink(key, contentType, contentSize);
         String fileCode = codeGeneratorService.getUniqueFileCode();
 
-        FileMetaData fileMetaData = fileMetaDataService.createPending(key, fileCode, duration, maxDownLoad);
+        FileMetaData fileMetaData = fileMetaDataService.createPending(key, fileCode, duration);
         return GenerateUploadLinkResponse.of(fileUrl, fileMetaData);
     }
 

@@ -27,9 +27,6 @@ public class FileMetaData {
 
     private LocalDateTime cleanAt;
 
-    private int downloadCount;
-    private int maxDownloadCount = 100;
-
     @Enumerated(EnumType.STRING)
     private FileState fileState = FileState.PENDING;
 

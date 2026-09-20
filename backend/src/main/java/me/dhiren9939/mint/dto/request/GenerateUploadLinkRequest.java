@@ -36,18 +36,6 @@ public class GenerateUploadLinkRequest {
     private String expiryDuration;
 
     @Schema(
-            description = "Maximum number of times this file can be downloaded",
-            example = "5",
-            minimum = "1",
-            maximum = "100",
-            requiredMode = Schema.RequiredMode.REQUIRED
-    )
-    @NotNull(message = "Max download count is required")
-    @Min(value = 1, message = "Max downloads must be at least 1")
-    @Max(value = 100, message = "Max downloads cannot exceed 100")
-    private Integer maxDownloadCount;
-
-    @Schema(
             description = "Name of the file (must include extension)",
             example = "project_specs.pdf",
             minLength = 4,

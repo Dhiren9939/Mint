@@ -28,9 +28,6 @@ public record GenerateUploadLinkResponse(
                 example = "2026-03-31T18:00:00")
         LocalDateTime expiresAt,
 
-        @Schema(description = "Maximum allowed downloads for this file.", example = "10")
-        int maxDownloadCount,
-
         @Schema(description = "Initial state of the file record (usually PENDING).", example = "PENDING")
         FileState fileState) {
 
@@ -41,7 +38,6 @@ public record GenerateUploadLinkResponse(
                 fileMetaData.getFileCode(),
                 fileMetaData.getFileKey(),
                 fileMetaData.getCleanAt(),
-                fileMetaData.getMaxDownloadCount(),
                 fileMetaData.getFileState()
         );
     }

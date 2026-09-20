@@ -34,14 +34,13 @@ class FileMetaDataServiceTest {
     void createPending_savesWithCorrectFields() {
         when(fileMetaDataRepository.save(any(FileMetaData.class))).thenAnswer(i -> i.getArgument(0));
 
-        FileMetaData result = fileMetaDataService.createPending("uploads/key.txt", "abc123", ExpiryDuration.MINUTES15, 5);
+        FileMetaData result = fileMetaDataService.createPending("uploads/key.txt", "abc123", ExpiryDuration.MINUTES15);
 
         assertNotNull(result);
         assertEquals("uploads/key.txt", result.getFileKey());
         assertEquals("abc123", result.getFileCode());
         assertEquals(FileState.PENDING, result.getFileState());
         assertEquals(ExpiryDuration.MINUTES15, result.getFileExpiryDuration());
-        assertEquals(5, result.getMaxDownloadCount());
         assertTrue(result.getCleanAt().isAfter(LocalDateTime.now()));
 
         verify(fileMetaDataRepository, times(1)).save(any(FileMetaData.class));
@@ -56,7 +55,6 @@ class FileMetaDataServiceTest {
                 .cleanAt(LocalDateTime.now().plusMinutes(5))
                 .fileState(FileState.PENDING)
                 .fileExpiryDuration(ExpiryDuration.HOURS24)
-                .maxDownloadCount(10)
                 .build();
 
         when(fileMetaDataRepository.findByFileKeyAndFileCode("key.txt", "abc123"))
@@ -100,30 +98,28 @@ class FileMetaDataServiceTest {
     }
 
     @Test
-    @DisplayName("getForDownload: increments download count when file is READY and valid")
-    void getForDownload_incrementsDownloadCount() {
+    @DisplayName("getForDownload: returns metadata when file is READY and valid")
+    void getForDownload_returnsMetadataWhenValid() {
         FileMetaData valid = FileMetaDataBuilder.builder()
                 .fileCode("abc123")
                 .fileKey("key.txt")
                 .cleanAt(LocalDateTime.now().plusMinutes(10))
                 .fileState(FileState.READY)
-                .downloadCount(1)
-                .maxDownloadCount(5)
                 .fileExpiryDuration(ExpiryDuration.MINUTES15)
                 .build();
 
-        when(fileMetaDataRepository.findByFileCodeWithLock("abc123")).thenReturn(Optional.of(valid));
-        when(fileMetaDataRepository.save(any(FileMetaData.class))).thenAnswer(i -> i.getArgument(0));
+        when(fileMetaDataRepository.findByFileCode("abc123")).thenReturn(Optional.of(valid));
 
         FileMetaData result = fileMetaDataService.getForDownload("abc123");
 
-        assertEquals(2, result.getDownloadCount());
+        assertEquals(FileState.READY, result.getFileState());
+        verify(fileMetaDataRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("getForDownload: throws FileMetaDataNotFoundException when file code not found")
     void getForDownload_throwsWhenNotFound() {
-        when(fileMetaDataRepository.findByFileCodeWithLock("abc123")).thenReturn(Optional.empty());
+        when(fileMetaDataRepository.findByFileCode("abc123")).thenReturn(Optional.empty());
 
         assertThrows(FileMetaDataNotFoundException.class, () -> fileMetaDataService.getForDownload("abc123"));
     }
@@ -139,7 +135,7 @@ class FileMetaDataServiceTest {
                 .fileExpiryDuration(ExpiryDuration.MINUTES15)
                 .build();
 
-        when(fileMetaDataRepository.findByFileCodeWithLock("abc123")).thenReturn(Optional.of(pending));
+        when(fileMetaDataRepository.findByFileCode("abc123")).thenReturn(Optional.of(pending));
 
         FileMetaDataNotFoundException ex = assertThrows(FileMetaDataNotFoundException.class, () -> fileMetaDataService.getForDownload("abc123"));
         assertTrue(ex.getMessage().contains("File not uploaded"));
@@ -156,25 +152,23 @@ class FileMetaDataServiceTest {
                 .fileExpiryDuration(ExpiryDuration.MINUTES15)
                 .build();
 
-        when(fileMetaDataRepository.findByFileCodeWithLock("abc123")).thenReturn(Optional.of(deleted));
+        when(fileMetaDataRepository.findByFileCode("abc123")).thenReturn(Optional.of(deleted));
 
         assertThrows(FileMetaDataNotFoundException.class, () -> fileMetaDataService.getForDownload("abc123"));
     }
 
     @Test
-    @DisplayName("getForDownload: marks state DELETED and throws exception if download limit reached or expired")
-    void getForDownload_marksDeletedWhenExpiredOrMaxDownloads() {
-        FileMetaData limitReached = FileMetaDataBuilder.builder()
+    @DisplayName("getForDownload: marks state DELETED and throws exception if expired")
+    void getForDownload_marksDeletedWhenExpired() {
+        FileMetaData expired = FileMetaDataBuilder.builder()
                 .fileCode("abc123")
                 .fileKey("key.txt")
-                .cleanAt(LocalDateTime.now().plusMinutes(10))
+                .cleanAt(LocalDateTime.now().minusMinutes(1))
                 .fileState(FileState.READY)
-                .downloadCount(5)
-                .maxDownloadCount(5)
                 .fileExpiryDuration(ExpiryDuration.MINUTES15)
                 .build();
 
-        when(fileMetaDataRepository.findByFileCodeWithLock("abc123")).thenReturn(Optional.of(limitReached));
+        when(fileMetaDataRepository.findByFileCode("abc123")).thenReturn(Optional.of(expired));
 
         assertThrows(FileMetaDataNotFoundException.class, () -> fileMetaDataService.getForDownload("abc123"));
 

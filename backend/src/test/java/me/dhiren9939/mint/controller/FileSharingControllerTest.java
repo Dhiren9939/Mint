@@ -51,16 +51,15 @@ class FileSharingControllerTest {
     @DisplayName("POST /api/v1/file/upload - 201 Created on valid request")
     void uploadLink_returns201OnSuccess() throws Exception {
         GenerateUploadLinkResponse response = new GenerateUploadLinkResponse(
-                "http://s3.upload.url", "a1b2c3", "uploads/key.txt", LocalDateTime.now().plusMinutes(5), 5, FileState.PENDING
+                "http://s3.upload.url", "a1b2c3", "uploads/key.txt", LocalDateTime.now().plusMinutes(5), FileState.PENDING
         );
 
-        when(fileSharingService.generateUploadLink(eq(ExpiryDuration.MINUTES15), eq(5), eq("test.txt"), eq("text/plain"), eq(1024)))
+        when(fileSharingService.generateUploadLink(eq(ExpiryDuration.MINUTES15), eq("test.txt"), eq("text/plain"), eq(1024)))
                 .thenReturn(response);
 
         String jsonBody = """
                 {
                     "expiryDuration": "MINUTES15",
-                    "maxDownloadCount": 5,
                     "fileName": "test.txt",
                     "contentType": "text/plain",
                     "contentSize": 1024
@@ -95,7 +94,6 @@ class FileSharingControllerTest {
         String jsonBody = """
                 {
                     "expiryDuration": "INVALID_DURATION",
-                    "maxDownloadCount": 5,
                     "fileName": "test.txt",
                     "contentType": "text/plain",
                     "contentSize": 1024
@@ -116,7 +114,6 @@ class FileSharingControllerTest {
         String jsonBody = String.format("""
                 {
                     "expiryDuration": "MINUTES15",
-                    "maxDownloadCount": 5,
                     "fileName": "large.zip",
                     "contentType": "application/zip",
                     "contentSize": %d
@@ -134,7 +131,7 @@ class FileSharingControllerTest {
     @DisplayName("PATCH /api/v1/file - 200 OK on confirm upload success")
     void confirmUpload_returns200OnSuccess() throws Exception {
         ConfirmUploadResponse response = new ConfirmUploadResponse(
-                "a1b2c3", LocalDateTime.now().plusHours(1), 5, FileState.READY
+                "a1b2c3", LocalDateTime.now().plusHours(1), FileState.READY
         );
 
         when(fileSharingService.confirmUpload("uploads/12345678-1234-1234-1234-1234567890ab.txt", "a1b2c3"))
@@ -196,7 +193,7 @@ class FileSharingControllerTest {
     @DisplayName("GET /api/v1/file/{fileCode} - 200 OK on valid code")
     void downloadLink_returns200OnSuccess() throws Exception {
         GenerateDownloadLinkResponse response = new GenerateDownloadLinkResponse(
-                "http://s3.download.url", LocalDateTime.now().plusHours(1), 1, 5
+                "http://s3.download.url", LocalDateTime.now().plusHours(1)
         );
 
         when(fileSharingService.generateDownloadLink("a1b2c3")).thenReturn(response);

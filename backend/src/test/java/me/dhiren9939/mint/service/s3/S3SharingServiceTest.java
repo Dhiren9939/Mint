@@ -51,15 +51,14 @@ class S3SharingServiceTest {
                 .fileKey("uploads/uuid.pdf")
                 .cleanAt(LocalDateTime.now().plusMinutes(5))
                 .fileState(FileState.PENDING)
-                .maxDownloadCount(5)
                 .fileExpiryDuration(ExpiryDuration.MINUTES15)
                 .build();
 
-        when(fileMetaDataService.createPending(anyString(), eq("code12"), eq(ExpiryDuration.MINUTES15), eq(5)))
+        when(fileMetaDataService.createPending(anyString(), eq("code12"), eq(ExpiryDuration.MINUTES15)))
                 .thenReturn(metaData);
 
         GenerateUploadLinkResponse response = s3SharingService.generateUploadLink(
-                ExpiryDuration.MINUTES15, 5, "report.pdf", "application/pdf", 1024
+                ExpiryDuration.MINUTES15, "report.pdf", "application/pdf", 1024
         );
 
         assertNotNull(response);
@@ -80,15 +79,14 @@ class S3SharingServiceTest {
                 .fileKey("uploads/uuid")
                 .cleanAt(LocalDateTime.now().plusMinutes(5))
                 .fileState(FileState.PENDING)
-                .maxDownloadCount(2)
                 .fileExpiryDuration(ExpiryDuration.MINUTES15)
                 .build();
 
-        when(fileMetaDataService.createPending(anyString(), anyString(), any(), anyInt()))
+        when(fileMetaDataService.createPending(anyString(), anyString(), any()))
                 .thenReturn(metaData);
 
         GenerateUploadLinkResponse response = s3SharingService.generateUploadLink(
-                ExpiryDuration.MINUTES15, 2, "README", "text/plain", 100
+                ExpiryDuration.MINUTES15, "README", "text/plain", 100
         );
 
         assertNotNull(response);
@@ -103,7 +101,6 @@ class S3SharingServiceTest {
                 .fileKey("key.txt")
                 .cleanAt(LocalDateTime.now().plusHours(1))
                 .fileState(FileState.READY)
-                .maxDownloadCount(10)
                 .fileExpiryDuration(ExpiryDuration.MINUTES60)
                 .build();
 
@@ -125,8 +122,6 @@ class S3SharingServiceTest {
                 .fileKey("key.txt")
                 .cleanAt(LocalDateTime.now().plusHours(1))
                 .fileState(FileState.READY)
-                .downloadCount(1)
-                .maxDownloadCount(5)
                 .fileExpiryDuration(ExpiryDuration.MINUTES60)
                 .build();
 
@@ -137,7 +132,5 @@ class S3SharingServiceTest {
 
         assertNotNull(response);
         assertEquals("http://s3.amazonaws.com/get-url", response.fileUrl());
-        assertEquals(1, response.downloadCount());
-        assertEquals(5, response.maxDownloadCount());
     }
 }

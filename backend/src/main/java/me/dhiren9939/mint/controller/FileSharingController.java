@@ -39,7 +39,6 @@ public class FileSharingController {
     handleGenerateUploadLink(@Valid @RequestBody GenerateUploadLinkRequest dto) {
         GenerateUploadLinkResponse uploadLink = fileSharingService.generateUploadLink(
                 ExpiryDuration.valueOf(dto.getExpiryDuration()),
-                dto.getMaxDownloadCount(),
                 dto.getFileName(),
                 dto.getContentType(),
                 dto.getContentSize()

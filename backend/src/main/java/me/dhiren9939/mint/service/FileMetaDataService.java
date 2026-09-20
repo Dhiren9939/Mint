@@ -20,11 +20,10 @@ import java.util.Optional;
 public class FileMetaDataService {
     private final FileMetaDataRepository fileMetaDataRepository;
 
-    public FileMetaData createPending(String fileKey, String fileCode, ExpiryDuration duration, int maxDownload) {
+    public FileMetaData createPending(String fileKey, String fileCode, ExpiryDuration duration) {
         FileMetaData fileMetaData = FileMetaDataBuilder.builder()
                 .fileCode(fileCode)
                 .cleanAt(LocalDateTime.now().plusMinutes(5))
-                .maxDownloadCount(maxDownload)
                 .fileState(FileState.PENDING)
                 .fileExpiryDuration(duration)
                 .fileKey(fileKey)
@@ -53,7 +52,7 @@ public class FileMetaDataService {
     }
 
     public FileMetaData getForDownload(String fileCode) throws FileMetaDataNotFoundException {
-        Optional<FileMetaData> optionalMetaData = fileMetaDataRepository.findByFileCodeWithLock(fileCode);
+        Optional<FileMetaData> optionalMetaData = fileMetaDataRepository.findByFileCode(fileCode);
         if (optionalMetaData.isEmpty())
             throw new FileMetaDataNotFoundException();
 
@@ -66,10 +65,9 @@ public class FileMetaDataService {
         if (fileState == FileState.DELETED)
             throw new FileMetaDataNotFoundException();
 
-        // Check downloadCount and cleanAt
-        int fileDownLoadCount = fileMetaData.getDownloadCount();
+        // Check cleanAt
         LocalDateTime fileExpiresAt = fileMetaData.getCleanAt();
-        if (LocalDateTime.now().isAfter(fileExpiresAt) || fileDownLoadCount >= fileMetaData.getMaxDownloadCount()) {
+        if (LocalDateTime.now().isAfter(fileExpiresAt)) {
             // Mark Deleted.
             fileMetaData.setFileState(FileState.DELETED);
             fileMetaDataRepository.save(fileMetaData);
@@ -77,8 +75,7 @@ public class FileMetaDataService {
             throw new FileMetaDataNotFoundException();
         }
 
-        fileMetaData.setDownloadCount(fileDownLoadCount + 1);
-        return fileMetaDataRepository.save(fileMetaData);
+        return fileMetaData;
     }
 
     private LocalDateTime getExpiresAt(ExpiryDuration duration) {
