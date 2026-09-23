@@ -2,8 +2,8 @@ package me.dhiren9939.mint.service.job;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
-import me.dhiren9939.mint.model.entity.metadata.FileState;
+import me.dhiren9939.mint.entity.FileMetaData;
+import me.dhiren9939.mint.entity.FileState;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import me.dhiren9939.mint.service.FileStorageService;
 import org.springframework.beans.factory.annotation.Value;

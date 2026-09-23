@@ -7,7 +7,7 @@ import me.dhiren9939.mint.dto.response.GenerateDownloadLinkResponse;
 import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
 import me.dhiren9939.mint.exception.FileCodeGenerationFailure;
 import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
-import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
+import me.dhiren9939.mint.entity.FileMetaData;
 import me.dhiren9939.mint.service.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

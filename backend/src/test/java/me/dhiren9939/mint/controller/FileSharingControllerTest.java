@@ -5,7 +5,7 @@ import me.dhiren9939.mint.dto.response.ConfirmUploadResponse;
 import me.dhiren9939.mint.dto.response.GenerateDownloadLinkResponse;
 import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
 import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
-import me.dhiren9939.mint.model.entity.metadata.FileState;
+import me.dhiren9939.mint.entity.FileState;
 import me.dhiren9939.mint.service.ExpiryDuration;
 import me.dhiren9939.mint.service.FileSharingService;
 import org.junit.jupiter.api.BeforeEach;

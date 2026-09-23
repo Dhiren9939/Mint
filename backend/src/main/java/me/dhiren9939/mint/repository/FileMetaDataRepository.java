@@ -1,7 +1,7 @@
 package me.dhiren9939.mint.repository;
 
-import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
-import me.dhiren9939.mint.model.entity.metadata.FileState;
+import me.dhiren9939.mint.entity.FileMetaData;
+import me.dhiren9939.mint.entity.FileState;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;

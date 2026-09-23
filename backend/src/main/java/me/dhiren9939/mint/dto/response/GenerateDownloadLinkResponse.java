@@ -1,7 +1,7 @@
 package me.dhiren9939.mint.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import me.dhiren9939.mint.model.entity.metadata.FileMetaData;
+import me.dhiren9939.mint.entity.FileMetaData;
 
 import java.time.LocalDateTime;
 

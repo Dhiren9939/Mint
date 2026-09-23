@@ -1,4 +1,4 @@
-package me.dhiren9939.mint.model.entity.metadata;
+package me.dhiren9939.mint.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
