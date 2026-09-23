@@ -4,7 +4,7 @@
   <img src="frontend/public/favicon.svg" alt="Mint Logo" width="120" />
 </p>
 
-A modern anonymous file and text sharing platform built with React, Spring Boot, PostgreSQL, Redis and AWS S3.
+A modern anonymous file and text sharing platform built with React, Spring Boot, DynamoDB, Redis and AWS S3.
 
 ## Highlights
 
@@ -18,7 +18,7 @@ A modern anonymous file and text sharing platform built with React, Spring Boot,
 
 - **Frontend:** React 19, Vite, Tailwind CSS, TypeScript
 - **Backend:** Java 21, Spring Boot 3.4.2
-- **Persistence:** PostgreSQL
+- **Persistence:** AWS DynamoDB
 - **Cache / session:** Redis
 - **Storage:** AWS S3
 
@@ -26,7 +26,7 @@ A modern anonymous file and text sharing platform built with React, Spring Boot,
 
 ```text
 Mint/
-  backend/    Spring Boot API, PostgreSQL metadata, AWS S3 storage
+  backend/    Spring Boot API, DynamoDB metadata, AWS S3 storage
   frontend/   React app, upload/share UI, analytics
 ```
 
@@ -35,9 +35,8 @@ Mint/
 - Java 21 SDK
 - Maven (or use `./backend/mvnw`)
 - Node.js 20+ and npm
-- PostgreSQL
 - Redis
-- AWS credentials configured for S3 access
+- AWS credentials configured for S3 and DynamoDB access
 
 ## Running Locally
 
