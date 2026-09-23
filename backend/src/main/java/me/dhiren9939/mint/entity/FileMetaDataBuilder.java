@@ -5,7 +5,6 @@ import me.dhiren9939.mint.service.ExpiryDuration;
 import java.time.LocalDateTime;
 
 public class FileMetaDataBuilder {
-    private long id = 0;
     private String fileCode;
     private String fileKey;
     private LocalDateTime cleanAt;
@@ -14,11 +13,6 @@ public class FileMetaDataBuilder {
 
     public static FileMetaDataBuilder builder() {
         return new FileMetaDataBuilder();
-    }
-
-    public FileMetaDataBuilder id(long id) {
-        this.id = id;
-        return this;
     }
 
     public FileMetaDataBuilder fileCode(String fileCode) {
@@ -58,8 +52,7 @@ public class FileMetaDataBuilder {
         if (fileExpiryDuration == null)
             throw new IllegalStateException("Incomplete FileMetaData: missing fileExpiryDuration");
 
-        return new FileMetaData(id,
-                fileCode,
+        return new FileMetaData(fileCode,
                 fileKey,
                 cleanAt,
                 fileState,

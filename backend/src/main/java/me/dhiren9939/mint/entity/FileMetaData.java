@@ -1,35 +1,33 @@
 package me.dhiren9939.mint.entity;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import me.dhiren9939.mint.service.ExpiryDuration;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 import java.time.LocalDateTime;
 
-@Entity
 @Getter
 @Setter
-@AllArgsConstructor
+@DynamoDbBean
 @NoArgsConstructor
+@AllArgsConstructor
 public class FileMetaData {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
-
-    @Column(unique = true, nullable = false)
     private String fileCode;
 
-    @Column(unique = true, nullable = false)
     private String fileKey;
 
     private LocalDateTime cleanAt;
 
-    @Enumerated(EnumType.STRING)
     private FileState fileState = FileState.PENDING;
 
-    @Enumerated(EnumType.STRING)
     private ExpiryDuration fileExpiryDuration;
+
+    @DynamoDbPartitionKey
+    public String getFileCode(){
+        return this.fileCode;
+    }
 }

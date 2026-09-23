@@ -2,13 +2,12 @@ package me.dhiren9939.mint.service;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
 import me.dhiren9939.mint.entity.FileMetaData;
 import me.dhiren9939.mint.entity.FileMetaDataBuilder;
 import me.dhiren9939.mint.entity.FileState;
+import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -16,7 +15,6 @@ import java.util.Optional;
 @Slf4j
 @Service
 @AllArgsConstructor
-@Transactional(noRollbackFor = FileMetaDataNotFoundException.class)
 public class FileMetaDataService {
     private final FileMetaDataRepository fileMetaDataRepository;
 

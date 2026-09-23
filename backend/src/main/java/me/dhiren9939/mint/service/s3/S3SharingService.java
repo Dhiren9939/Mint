@@ -5,19 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.dto.response.ConfirmUploadResponse;
 import me.dhiren9939.mint.dto.response.GenerateDownloadLinkResponse;
 import me.dhiren9939.mint.dto.response.GenerateUploadLinkResponse;
+import me.dhiren9939.mint.entity.FileMetaData;
 import me.dhiren9939.mint.exception.FileCodeGenerationFailure;
 import me.dhiren9939.mint.exception.FileMetaDataNotFoundException;
-import me.dhiren9939.mint.entity.FileMetaData;
 import me.dhiren9939.mint.service.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 @Slf4j
 @Service
 @AllArgsConstructor
-@Transactional(noRollbackFor = FileMetaDataNotFoundException.class)
 public class S3SharingService implements FileSharingService {
     private final FileStorageService fileStorageService;
     private final CodeGeneratorService codeGeneratorService;
