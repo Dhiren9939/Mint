@@ -26,7 +26,6 @@ concurrency:
 jobs:
   run-ci:
     if: vars.CICD_ENABLED != 'false' && (inputs.EC2_PUBLIC_IP != '' || vars.EC2_PUBLIC_IP != '')
-    environment: prod
     uses: ./.github/workflows/backend-ci.yml
 
   build-push:

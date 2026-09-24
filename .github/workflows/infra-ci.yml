@@ -2,7 +2,17 @@ name: infra-ci
 
 on:
   workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: false
+        default: prod
   workflow_dispatch:
+    inputs:
+      environment:
+        type: string
+        required: false
+        default: prod
   pull_request:
     branches: [main]
     paths:
@@ -19,7 +29,7 @@ permissions:
 
 jobs:
   plan:
-    environment: prod
+    environment: ${{ inputs.environment || 'prod' }}
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -26,12 +26,13 @@ concurrency:
 jobs:
   run-ci:
     if: vars.CICD_ENABLED != 'false'
-    environment: prod
     permissions:
       id-token: write
       contents: read
       pull-requests: write
     uses: ./.github/workflows/infra-ci.yml
+    with:
+      environment: prod
     secrets: inherit
 
   apply:
@@ -73,8 +74,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          gh variable set EC2_PUBLIC_IP --env prod --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
-          gh variable set CLOUDFRONT_ID --env prod --body "${{ steps.tf_out.outputs.CLOUDFRONT_ID }}"
+          gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
+          gh variable set CLOUDFRONT_ID --body "${{ steps.tf_out.outputs.CLOUDFRONT_ID }}"
 
       - name: SCP scripts
         uses: appleboy/scp-action@v1.0.0

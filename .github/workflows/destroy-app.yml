@@ -43,5 +43,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          gh variable delete EC2_PUBLIC_IP --env prod || true
-          gh variable delete CLOUDFRONT_ID --env prod || true
+          gh variable delete EC2_PUBLIC_IP || true
+          gh variable delete CLOUDFRONT_ID || true
