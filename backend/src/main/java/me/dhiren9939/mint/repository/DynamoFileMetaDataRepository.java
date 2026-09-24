@@ -7,6 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 
 import java.util.Optional;
 
@@ -28,15 +29,20 @@ public class DynamoFileMetaDataRepository implements FileMetaDataRepository {
 
     @Override
     public Optional<FileMetaData> findByFileCode(String fileCode) {
-        Key key = Key.builder().partitionValue(fileCode).build();
-        return Optional.ofNullable(table.getItem(key));
+        return Optional.ofNullable(table.getItem(consistentGet(fileCode)));
     }
 
     @Override
     public Optional<FileMetaData> findByFileKeyAndFileCode(String fileKey, String fileCode) {
-        Key key = Key.builder().partitionValue(fileCode).build();
         return Optional
-                .ofNullable(table.getItem(key))
+                .ofNullable(table.getItem(consistentGet(fileCode)))
                 .filter(fileMetaData -> fileMetaData.getFileKey().equals(fileKey));
+    }
+
+    private GetItemEnhancedRequest consistentGet(String fileCode) {
+        return GetItemEnhancedRequest.builder()
+                .key(Key.builder().partitionValue(fileCode).build())
+                .consistentRead(true)
+                .build();
     }
 }
