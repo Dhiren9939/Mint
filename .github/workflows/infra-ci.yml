@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   plan:
+    environment: prod
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -39,9 +40,6 @@ jobs:
         run: terraform validate -no-color
 
       - name: Terraform Plan
-        env:
-          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
-          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         id: plan
         run: terraform plan -no-color -input=false -lock-timeout=20m -out .planfile
         continue-on-error: true

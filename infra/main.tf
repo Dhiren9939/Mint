@@ -19,9 +19,9 @@ provider "aws" {
 }
 
 module "iam" {
-  source                = "./modules/iam"
-  ec2_arn               = module.ec2.server_instance_arn
-  user_files_bucket_arn = module.s3.user_files_bucket_arn
+  source                   = "./modules/iam"
+  user_files_bucket_arn    = module.s3.user_files_bucket_arn
+  file_meta_data_table_arn = module.dynamodb.file_metadata_table_arn
 }
 
 module "route53" {
@@ -35,7 +35,7 @@ module "s3" {
   source          = "./modules/s3"
   mint_frontend   = var.mint_frontend_bucket
   mint_user_files = var.mint_user_files
-  domain_name = var.domain_name
+  domain_name     = var.domain_name
 }
 
 module "ec2" {
@@ -50,13 +50,9 @@ module "vpc" {
   source = "./modules/vpc"
 }
 
-module "rds" {
-  source               = "./modules/rds"
-  db_username          = var.db_username
-  db_password          = var.db_password
-  db_subnet_group_name = module.vpc.rds_subnet_group_name
-  rds_sg_id            = module.vpc.rds_sg_id
-  db_name              = var.db_name
+module "dynamodb" {
+  source     = "./modules/dynamodb"
+  table_name = var.table_name
 }
 
 module "cloudfront" {

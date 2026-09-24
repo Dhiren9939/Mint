@@ -19,6 +19,7 @@ concurrency:
 jobs:
   destory:
     if: inputs.confirm == 'destroy'
+    environment: prod
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,15 +37,11 @@ jobs:
           working-directory: "./infra"
 
       - name: Terraform Destroy
-        env:
-          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
-          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         run: terraform destroy -no-color -input=false -auto-approve
 
       - name: Delete Infra Variables
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          gh variable delete EC2_PUBLIC_IP || true
-          gh variable delete CLOUDFRONT_ID || true
-          gh variable delete RDS_ENDPOINT || true
+          gh variable delete EC2_PUBLIC_IP --env prod || true
+          gh variable delete CLOUDFRONT_ID --env prod || true

@@ -25,9 +25,11 @@ concurrency:
 jobs:
   run-ci:
     if: vars.CICD_ENABLED != 'false' && (inputs.CLOUDFRONT_ID != '' || vars.CLOUDFRONT_ID != '')
+    environment: prod
     uses: ./.github/workflows/frontend-ci.yml
 
   deploy:
+    environment: prod
     needs: run-ci
     runs-on: ubuntu-latest
 

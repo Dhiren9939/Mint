@@ -10,22 +10,9 @@ variable "domain_name" {
   default     = "dhiren.xyz"
 }
 
-variable "db_username" {
-  type        = string
-  description = "The username for the RDS database"
-  sensitive   = true
-}
-
-variable "db_password" {
-  type        = string
-  description = "The password for the RDS database"
-  sensitive   = true
-}
-
-variable "db_name" {
-  type = string
-  description = "The name of the databse"
-  default = "mintdb"
+variable "table_name" {
+  type    = string
+  default = "FileMetaData"
 }
 
 variable "mint_frontend_bucket" {

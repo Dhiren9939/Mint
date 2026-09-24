@@ -37,6 +37,14 @@ resource "aws_iam_policy" "mint_api_role_policy" {
           "s3:DeleteObject"
         ]
         Resource = "${var.user_files_bucket_arn}/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem"
+        ],
+        Resource = var.file_meta_data_table_arn
       }
     ]
   })

@@ -21,14 +21,10 @@ EOF
 
 sudo apt update
 
-sudo apt install -y postgresql-client
-
 sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
 sudo systemctl enable --now docker
 
 sudo systemctl status docker
-
-sudo curl -o /opt/mint-backend/config/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
 sudo chmod -R 755 /opt/mint-backend
