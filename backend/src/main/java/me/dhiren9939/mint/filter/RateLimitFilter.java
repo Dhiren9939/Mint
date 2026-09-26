@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.common.ApiError;
 import me.dhiren9939.mint.common.ApiResponse;
+import me.dhiren9939.mint.config.RedisProxyManagerProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
@@ -49,7 +50,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Value("${spring.profiles.active:dev}")
     private String profile;
 
-    private final ProxyManager<String> proxyManager;
+    private final RedisProxyManagerProvider proxyManagerProvider;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -57,6 +58,37 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                  HttpServletResponse response,
                                  FilterChain filterChain) throws ServletException, IOException {
 
+        Optional<ProxyManager<String>> proxyManager = proxyManagerProvider.get();
+        if (proxyManager.isEmpty()) {
+            // Fail open, no rate limiting at all while the cache is unavailable
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String rejectedBy;
+        try {
+            rejectedBy = consumeLimits(proxyManager.get(), request, response);
+        } catch (RuntimeException e) {
+            // Fail open, a cache outage must not take the API down
+            log.warn("Rate limiter unavailable, allowing request: {}", e.toString());
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (rejectedBy != null) {
+            rejectRequest(response, rejectedBy);
+            return;
+        }
+
+        filterChain.doFilter(request, response);
+    }
+
+    /**
+     * @return the name of the limit that rejected the request, or null if it is allowed
+     */
+    private String consumeLimits(ProxyManager<String> proxyManager,
+                                 HttpServletRequest request,
+                                 HttpServletResponse response) {
         String method = request.getMethod().toUpperCase();
         boolean isGet = method.equals("GET");
 
@@ -67,41 +99,38 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String ipKey = keyBuilder("IP", method, ip);
         String userKey = keyBuilder("USER", method, userId);
 
-        Bucket globalBucket = isGet ? getBucket(globalKey, globalGetCapacity, Duration.ofDays(30)) :
-                getBucket(globalKey, globalPostCapacity, Duration.ofDays(30));
+        Bucket globalBucket = isGet ? getBucket(proxyManager, globalKey, globalGetCapacity, Duration.ofDays(30)) :
+                getBucket(proxyManager, globalKey, globalPostCapacity, Duration.ofDays(30));
 
-        Bucket ipBucket = isGet ? getBucket(ipKey, ipGetCapacity, Duration.ofMinutes(1)) :
-                getBucket(ipKey, ipPostCapacity, Duration.ofMinutes(1));
+        Bucket ipBucket = isGet ? getBucket(proxyManager, ipKey, ipGetCapacity, Duration.ofMinutes(1)) :
+                getBucket(proxyManager, ipKey, ipPostCapacity, Duration.ofMinutes(1));
 
-        Bucket userBucket = isGet ? getBucket(userKey, userGetCapacity, Duration.ofDays(1)) :
-                getBucket(userKey, userPostCapacity, Duration.ofDays(1));
+        Bucket userBucket = isGet ? getBucket(proxyManager, userKey, userGetCapacity, Duration.ofDays(1)) :
+                getBucket(proxyManager, userKey, userPostCapacity, Duration.ofDays(1));
 
         if (!globalBucket.tryConsume(1)) {
-            rejectRequest(response, "Global");
-            return;
+            return "Global";
         }
 
         if (!ipBucket.tryConsume(1)) {
             globalBucket.addTokens(1);
-            rejectRequest(response, "IP");
-            return;
+            return "IP";
         }
 
         if (!userBucket.tryConsume(1)) {
             globalBucket.addTokens(1);
             ipBucket.addTokens(1);
-            rejectRequest(response, "User");
-            return;
+            return "User";
         }
 
-        filterChain.doFilter(request, response);
+        return null;
     }
 
     private String keyBuilder(String type, String method, String id) {
         return type + "_" + method + ":" + id;
     }
 
-    private Bucket getBucket(String key, int capacity, Duration duration) {
+    private Bucket getBucket(ProxyManager<String> proxyManager, String key, int capacity, Duration duration) {
         BucketConfiguration configuration = BucketConfiguration
                 .builder()
                 .addLimit(Bandwidth

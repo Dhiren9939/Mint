@@ -1,6 +1,5 @@
 package me.dhiren9939.mint.config;
 
-import io.github.bucket4j.distributed.proxy.ProxyManager;
 import me.dhiren9939.mint.filter.RateLimitFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -39,9 +38,9 @@ public class SecurityConfig {
    }
 
     @Bean
-    public RateLimitFilter rateLimitFilter(ProxyManager<String> proxyManager,
+    public RateLimitFilter rateLimitFilter(RedisProxyManagerProvider proxyManagerProvider,
                                            ObjectMapper objectMapper) {
-        return new RateLimitFilter(proxyManager, objectMapper);
+        return new RateLimitFilter(proxyManagerProvider, objectMapper);
     }
 
     @Bean

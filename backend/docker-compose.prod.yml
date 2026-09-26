@@ -7,15 +7,14 @@ services:
       - "80:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      REDIS_HOST: ${REDIS_HOST:?REDIS_HOST must be set}
+      REDIS_AUTH_TOKEN: ${REDIS_AUTH_TOKEN:?REDIS_AUTH_TOKEN must be set}
       JAVA_TOOL_OPTIONS: >-
         -XX:MaxRAMPercentage=85.0
         -XX:InitialRAMPercentage=40.0
         -XX:+UseG1GC
     volumes:
       - /opt/mint-backend/config/:/app/config/:ro
-    depends_on:
-      redis:
-        condition: service_healthy
     networks:
       mint-net:
     restart:
@@ -25,28 +24,5 @@ services:
         limits:
           memory: 700m
 
-  redis:
-    image: redis:7-alpine
-    command: [ "redis-server", "--save", "60", "1", "--maxmemory", "150mb",
-               "--maxmemory-policy", "allkeys-lru" ]
-    volumes:
-      - mint-redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
-    networks:
-      mint-net:
-    restart:
-      unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 200m
-
-volumes:
-  mint-redis:
 networks:
   mint-net:
