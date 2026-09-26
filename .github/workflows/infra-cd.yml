@@ -7,6 +7,8 @@ on:
         value: ${{ jobs.apply.outputs.EC2_PUBLIC_IP }}
       CLOUDFRONT_ID:
         value: ${{ jobs.apply.outputs.CLOUDFRONT_ID }}
+      REDIS_HOST:
+        value: ${{ jobs.apply.outputs.REDIS_HOST }}
   workflow_dispatch:
   push:
     branches: [main]
@@ -43,6 +45,7 @@ jobs:
     outputs:
       EC2_PUBLIC_IP: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
       CLOUDFRONT_ID: ${{ steps.tf_out.outputs.CLOUDFRONT_ID }}
+      REDIS_HOST: ${{ steps.tf_out.outputs.REDIS_HOST }}
 
     needs: run-ci
     runs-on: ubuntu-latest
@@ -62,6 +65,8 @@ jobs:
           working-directory: "./infra"
 
       - name: Terraform Apply
+        env:
+          TF_VAR_redis_auth_token: ${{ secrets.REDIS_AUTH_TOKEN }}
         run: terraform apply -no-color -input=false -auto-approve
 
       - name: Output Resource Details
@@ -69,6 +74,7 @@ jobs:
         run: |
           echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
           echo "CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
+          echo "REDIS_HOST=$(terraform output -raw redis_endpoint)" >> $GITHUB_OUTPUT
 
       - name: Update Repo Variables
         env:
@@ -76,6 +82,7 @@ jobs:
         run: |
           gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
           gh variable set CLOUDFRONT_ID --body "${{ steps.tf_out.outputs.CLOUDFRONT_ID }}"
+          gh variable set REDIS_HOST --body "${{ steps.tf_out.outputs.REDIS_HOST }}"
 
       - name: SCP scripts
         uses: appleboy/scp-action@v1.0.0

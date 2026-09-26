@@ -6,6 +6,9 @@ on:
       EC2_PUBLIC_IP:
         type: string
         required: true
+      REDIS_HOST:
+        type: string
+        required: true
   workflow_dispatch:
   push:
     branches: [main]
@@ -99,10 +102,12 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           IMAGE_TAG: ${{ needs.build-push.outputs.image-tag }}
+          REDIS_HOST: ${{ inputs.REDIS_HOST || vars.REDIS_HOST }}
+          REDIS_AUTH_TOKEN: ${{ secrets.REDIS_AUTH_TOKEN }}
         with:
           host: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          envs: IMAGE_TAG
+          envs: IMAGE_TAG,REDIS_HOST,REDIS_AUTH_TOKEN
           script: |
             sudo -E bash /tmp/redeploy.sh

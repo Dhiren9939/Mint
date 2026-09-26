@@ -37,6 +37,8 @@ jobs:
           working-directory: "./infra"
 
       - name: Terraform Destroy
+        env:
+          TF_VAR_redis_auth_token: ${{ secrets.REDIS_AUTH_TOKEN }}
         run: terraform destroy -no-color -input=false -auto-approve
 
       - name: Delete Infra Variables
@@ -45,3 +47,4 @@ jobs:
         run: |
           gh variable delete EC2_PUBLIC_IP || true
           gh variable delete CLOUDFRONT_ID || true
+          gh variable delete REDIS_HOST || true

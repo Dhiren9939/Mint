@@ -34,4 +34,5 @@ jobs:
     uses: ./.github/workflows/backend-cd.yml
     with:
       EC2_PUBLIC_IP: ${{ needs.infra-cd.outputs.EC2_PUBLIC_IP }}
+      REDIS_HOST: ${{ needs.infra-cd.outputs.REDIS_HOST }}
     secrets: inherit
