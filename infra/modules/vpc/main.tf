@@ -67,3 +67,43 @@ resource "aws_security_group_rule" "ec2_to_internet" {
   to_port           = 443
   cidr_blocks       = ["0.0.0.0/0"]
 }
+
+resource "aws_subnet" "private_a" {
+  cidr_block        = "10.0.10.0/24"
+  vpc_id            = aws_vpc.main_vpc.id
+  availability_zone = "ap-south-1a"
+}
+
+resource "aws_subnet" "private_b" {
+  cidr_block        = "10.0.11.0/24"
+  vpc_id            = aws_vpc.main_vpc.id
+  availability_zone = "ap-south-1b"
+}
+
+resource "aws_elasticache_subnet_group" "cache" {
+  name       = "mint-cache-subnets"
+  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+}
+
+resource "aws_security_group" "cache_sg" {
+  name   = "mint-cache"
+  vpc_id = aws_vpc.main_vpc.id
+}
+
+resource "aws_security_group_rule" "ec2_to_cache_ingress" {
+  type                     = "ingress"
+  security_group_id        = aws_security_group.cache_sg.id
+  protocol                 = "tcp"
+  from_port                = 6379
+  to_port                  = 6379
+  source_security_group_id = aws_security_group.ec2_sg.id
+}
+
+resource "aws_security_group_rule" "ec2_to_cache_egress" {
+  type                     = "egress"
+  security_group_id        = aws_security_group.ec2_sg.id
+  protocol                 = "tcp"
+  from_port                = 6379
+  to_port                  = 6379
+  source_security_group_id = aws_security_group.cache_sg.id
+}

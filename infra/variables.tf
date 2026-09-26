@@ -42,3 +42,9 @@ variable "ssh_public_key" {
   description = "The public key for Mint Key Pair"
   default     = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC0uYGtqbp73M9prIVb1nGl5aCXDqGiQ6cr4E3NIUifo1Mii0Tu/8EhOIqeShfLIc9RIflFru25/0h6P5z01pqjBFEKgtp1UbWkqT/xRXjf93b/M/P7SWjvMbQB+PcLW0i8JqBJO2er+mR5XOGMZa1V3yzbV/dUaE8nYES97RQFI+V10CehvoPHgBhte/zidUUqdrppd+lgSppzst3Wq7OQK1DXXYVD5myrzY2txNaj/dzAKaPIww4HV6xaWPnYfleXwHHqN0XjS56mmw5T4TWzlV+vS2ZQyIWLMaK1OhdDZTBioKQRhSxD87MpuYAxPhnNiWZqkhVbm2NsVL9V38pT MintKey"
 }
+
+variable "redis_auth_token" {
+  type        = string
+  sensitive   = true
+  description = "The Valkey AUTH token"
+}

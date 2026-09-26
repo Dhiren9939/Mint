@@ -64,3 +64,11 @@ module "cloudfront" {
   acm_certificate_arn         = var.acm_certificate_arn
   domain_name                 = var.domain_name
 }
+
+module "elasticache" {
+  source             = "./modules/elasticache"
+  subnet_group_name  = module.vpc.cache_subnet_group_name
+  security_group_id  = module.vpc.cache_sg_id
+  availability_zones = module.vpc.private_subnet_azs
+  auth_token         = var.redis_auth_token
+}

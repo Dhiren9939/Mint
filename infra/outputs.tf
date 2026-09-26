@@ -29,3 +29,7 @@ output "cloudfront_distribution_id" {
 output "server_instance_id" {
   value = module.ec2.server_instance_id
 }
+
+output "redis_endpoint" {
+  value = module.elasticache.primary_endpoint_address
+}
