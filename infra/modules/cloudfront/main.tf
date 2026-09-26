@@ -1,7 +1,7 @@
 resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   default_root_object = "index.html"
-  aliases             = ["mint.${var.domain_name}"]
+  aliases             = [var.subdomain]
 
   custom_error_response {
     error_code         = 403
@@ -61,7 +61,7 @@ resource "aws_cloudfront_distribution" "cdn" {
 }
 
 resource "aws_cloudfront_origin_access_control" "oac" {
-  name                              = "oac-for-s3-origin"
+  name                              = "${var.name}-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -91,7 +91,7 @@ resource "aws_s3_bucket_policy" "cloudfront_access" {
 }
 
 resource "aws_cloudfront_origin_request_policy" "api_cookies" {
-  name = "mint-api-cookies"
+  name = "${var.name}-api-cookies"
 
   cookies_config {
     cookie_behavior = "whitelist"

@@ -5,32 +5,61 @@ on:
     inputs:
       environment:
         type: string
-        required: false
-        default: prod
+        required: true
   workflow_dispatch:
-    inputs:
-      environment:
-        type: string
-        required: false
-        default: prod
   pull_request:
-    branches: [main]
     paths:
       - "infra/**"
       - ".github/workflows/infra-ci.yml"
       - ".github/workflows/infra-cd.yml"
+      - ".github/workflows/env-config.yml"
       - ".github/workflows/scripts/**"
       - ".github/actions/setup-aws-terraform/**"
 
 permissions:
   contents: read
-  pull-requests: write
   id-token: write
 
 jobs:
-  plan:
-    environment: ${{ inputs.environment || 'prod' }}
+  # Callers pass the environment and have already checked the toggles
+  config:
+    if: ${{ !inputs.environment }}
+    uses: ./.github/workflows/env-config.yml
+
+  # Pull requests never enter an environment, so they can't read its secrets.
+  # They get credential-free checks; the real plan runs on the environment branch before apply.
+  validate:
+    needs: config
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.config.outputs.run-ci == 'true' }}
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout Files
+
+      - uses: hashicorp/setup-terraform@v4
+        name: Setup Terraform
+        with:
+          terraform_version: "1.15.3"
+
+      - name: Terraform Format
+        run: terraform fmt -check -recursive -no-color
+
+      - name: Terraform Validate
+        run: |
+          terraform init -backend=false -input=false -no-color
+          terraform validate -no-color
+
+  plan:
+    needs: config
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
+    environment: ${{ inputs.environment || needs.config.outputs.environment }}
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ inputs.environment || needs.config.outputs.environment }}
     defaults:
       run:
         working-directory: ./infra
@@ -45,6 +74,7 @@ jobs:
           aws-region: ap-south-1
           role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
           working-directory: "./infra"
+          environment: ${{ env.ENVIRONMENT }}
 
       - name: Terraform Validate
         run: terraform validate -no-color
@@ -53,16 +83,8 @@ jobs:
         id: plan
         env:
           TF_VAR_REDIS_AUTH_TOKEN: ${{ secrets.TF_VAR_REDIS_AUTH_TOKEN }}
-        run: terraform plan -no-color -input=false -lock-timeout=20m -out .planfile
+        run: terraform plan -no-color -input=false -lock-timeout=20m -var-file="envs/$ENVIRONMENT.tfvars" -out .planfile
         continue-on-error: true
-
-      - name: Add PR Comment
-        if: github.event_name == 'pull_request'
-        uses: borchero/terraform-plan-comment@v3.2.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: .planfile
-          working-directory: ./infra
 
       - name: Set Failure Exit Code
         if: steps.plan.outcome == 'failure'

@@ -1,10 +1,13 @@
-name: destory-app
+name: destroy-app
+
+# Run from the environment's branch: main destroys prod, any other branch its own environment.
+# Not gated by CD_ENABLED so an environment can always be torn down.
 
 on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: "Type 'destroy' to confirm"
+        description: "Type the environment name (prod for main) to confirm"
         required: true
         type: string
 
@@ -13,14 +16,20 @@ permissions:
   id-token: write
 
 concurrency:
-  group: production-lifecycle
+  group: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-lifecycle
   cancel-in-progress: false
 
 jobs:
-  destory:
-    if: inputs.confirm == 'destroy'
-    environment: prod
+  config:
+    uses: ./.github/workflows/env-config.yml
+
+  destroy:
+    needs: config
+    if: needs.config.outputs.deployable == 'true' && inputs.confirm == needs.config.outputs.environment
+    environment: ${{ needs.config.outputs.environment }}
     runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ needs.config.outputs.environment }}
     defaults:
       run:
         working-directory: ./infra
@@ -35,16 +44,17 @@ jobs:
           aws-region: ap-south-1
           role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
           working-directory: "./infra"
+          environment: ${{ env.ENVIRONMENT }}
 
       - name: Terraform Destroy
         env:
           TF_VAR_REDIS_AUTH_TOKEN: ${{ secrets.TF_VAR_REDIS_AUTH_TOKEN }}
-        run: terraform destroy -no-color -input=false -auto-approve
+        run: terraform destroy -no-color -input=false -auto-approve -var-file="envs/$ENVIRONMENT.tfvars"
 
-      - name: Delete Infra Variables
+      - name: Delete Environment Variables
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          gh variable delete EC2_PUBLIC_IP || true
-          gh variable delete CLOUDFRONT_ID || true
-          gh variable delete REDIS_HOST || true
+          for name in EC2_PUBLIC_IP REDIS_HOST DYNAMO_TABLE USER_FILES_BUCKET FRONTEND_BUCKET CLOUDFRONT_ID; do
+            gh variable delete "$name" --env "$ENVIRONMENT" || true
+          done

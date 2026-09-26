@@ -1,3 +1,31 @@
+variable "environment" {
+  type        = string
+  description = "The deployment environment, prod or the name of the environment branch"
+}
+
+variable "frontend_enabled" {
+  type        = bool
+  description = "Deploy the frontend bucket and CloudFront, backend-only environments set this to false"
+  default     = true
+}
+
+variable "user_files_enabled" {
+  type        = bool
+  description = "Deploy the user files bucket"
+  default     = true
+}
+
+variable "api_ingress_cidrs" {
+  type        = list(string)
+  description = "CIDRs allowed to reach the API directly when there is no CloudFront"
+  default     = []
+
+  validation {
+    condition     = var.frontend_enabled || length(var.api_ingress_cidrs) > 0
+    error_message = "Backend-only environments need api_ingress_cidrs, otherwise nothing can reach the API."
+  }
+}
+
 variable "region" {
   description = "The AWS region"
   type        = string
@@ -8,21 +36,6 @@ variable "domain_name" {
   description = "The target domain name"
   type        = string
   default     = "dhiren.xyz"
-}
-
-variable "table_name" {
-  type    = string
-  default = "FileMetaData"
-}
-
-variable "mint_frontend_bucket" {
-  type    = string
-  default = "mint-frontend-bucket"
-}
-
-variable "mint_user_files" {
-  type    = string
-  default = "mint-user-files-bucket"
 }
 
 variable "acm_certificate_arn" {

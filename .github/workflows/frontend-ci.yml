@@ -2,19 +2,30 @@ name: frontend-ci
 
 on:
   workflow_call:
+    inputs:
+      called:
+        type: boolean
+        default: true
     outputs:
       build-id:
         value: ${{ jobs.lint-test-build.outputs.build-id }}
   workflow_dispatch:
   pull_request:
-    branches: [main]
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-ci.yml"
       - ".github/workflows/frontend-cd.yml"
+      - ".github/workflows/env-config.yml"
 
 jobs:
+  # Callers have already checked the toggles
+  config:
+    if: ${{ !inputs.called }}
+    uses: ./.github/workflows/env-config.yml
+
   lint-test-build:
+    needs: config
+    if: ${{ !cancelled() && (inputs.called || needs.config.outputs.run-ci == 'true') }}
     runs-on: ubuntu-latest
     defaults:
       run:

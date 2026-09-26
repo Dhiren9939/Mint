@@ -3,37 +3,69 @@ name: frontend-cd
 on:
   workflow_call:
     inputs:
+      environment:
+        type: string
+        required: true
+      FRONTEND_BUCKET:
+        type: string
+        required: true
       CLOUDFRONT_ID:
         type: string
         required: true
   workflow_dispatch:
   push:
-    branches: [main]
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-ci.yml"
       - ".github/workflows/frontend-cd.yml"
+      - ".github/workflows/env-config.yml"
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: production-frontend
+  group: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || github.ref_name) }}-frontend
   cancel-in-progress: true
 
 jobs:
+  # Callers pass the environment and have already checked the toggles
+  config:
+    if: ${{ !inputs.environment }}
+    uses: ./.github/workflows/env-config.yml
+
   run-ci:
-    if: vars.CICD_ENABLED != 'false' && (inputs.CLOUDFRONT_ID != '' || vars.CLOUDFRONT_ID != '')
+    needs: config
+    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
     uses: ./.github/workflows/frontend-ci.yml
 
   deploy:
-    environment: prod
-    needs: run-ci
+    needs: [config, run-ci]
+    if: ${{ !cancelled() && needs.run-ci.result == 'success' && (inputs.environment || needs.config.outputs.run-cd == 'true') }}
+    environment: ${{ inputs.environment || needs.config.outputs.environment }}
     runs-on: ubuntu-latest
 
     steps:
+      # Backend-only environments have no frontend bucket
+      - name: Check Frontend
+        id: frontend
+        env:
+          FRONTEND_BUCKET: ${{ inputs.FRONTEND_BUCKET || vars.FRONTEND_BUCKET }}
+          CLOUDFRONT_ID: ${{ inputs.CLOUDFRONT_ID || vars.CLOUDFRONT_ID }}
+        run: |
+          if [ -z "$FRONTEND_BUCKET" ] || [ -z "$CLOUDFRONT_ID" ]; then
+            echo "::notice::This environment has no frontend, skipping deploy"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "enabled=true"
+              echo "bucket=$FRONTEND_BUCKET"
+              echo "cloudfront-id=$CLOUDFRONT_ID"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download build
+        if: steps.frontend.outputs.enabled == 'true'
         uses: actions/download-artifact@v8.0.0
         with:
           artifact-ids: ${{ needs.run-ci.outputs.build-id }}
@@ -41,16 +73,21 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v6
         name: Configure AWS Credentials
+        if: steps.frontend.outputs.enabled == 'true'
         with:
           aws-region: ap-south-1
           role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
 
       - name: Sync S3
+        if: steps.frontend.outputs.enabled == 'true'
+        env:
+          FRONTEND_BUCKET: ${{ steps.frontend.outputs.bucket }}
         run: |
-          aws s3 sync /tmp/build s3://mint-frontend-bucket/ --delete
+          aws s3 sync /tmp/build "s3://$FRONTEND_BUCKET/" --delete
 
       - name: Invalidate CloudFront
+        if: steps.frontend.outputs.enabled == 'true'
         env:
-          CLOUDFRONT_ID: ${{ inputs.CLOUDFRONT_ID || vars.CLOUDFRONT_ID }}
+          CLOUDFRONT_ID: ${{ steps.frontend.outputs.cloudfront-id }}
         run: |
-          aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --path /index.html
+          aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_ID" --path /index.html

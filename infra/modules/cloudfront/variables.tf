@@ -1,3 +1,8 @@
+variable "name" {
+  type        = string
+  description = "Name prefix for this environment's resources"
+}
+
 variable "acm_certificate_arn" {
   type = string
 }
@@ -6,7 +11,7 @@ variable "frontend_bucket_domain_name" {
   type = string
 }
 
-variable "domain_name" {
+variable "subdomain" {
   type = string
 }
 

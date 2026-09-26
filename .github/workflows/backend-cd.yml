@@ -3,19 +3,28 @@ name: backend-cd
 on:
   workflow_call:
     inputs:
+      environment:
+        type: string
+        required: true
       EC2_PUBLIC_IP:
         type: string
         required: true
       REDIS_HOST:
         type: string
         required: true
+      DYNAMO_TABLE:
+        type: string
+        required: true
+      USER_FILES_BUCKET:
+        type: string
+        required: true
   workflow_dispatch:
   push:
-    branches: [main]
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
       - ".github/workflows/backend-cd.yml"
+      - ".github/workflows/env-config.yml"
       - ".github/workflows/scripts/redeploy.sh"
 
 permissions:
@@ -23,17 +32,24 @@ permissions:
   packages: write
 
 concurrency:
-  group: production-backend
+  group: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || github.ref_name) }}-backend
   cancel-in-progress: true
 
 jobs:
+  # Callers pass the environment and have already checked the toggles
+  config:
+    if: ${{ !inputs.environment }}
+    uses: ./.github/workflows/env-config.yml
+
   run-ci:
-    if: vars.CICD_ENABLED != 'false' && (inputs.EC2_PUBLIC_IP != '' || vars.EC2_PUBLIC_IP != '')
+    needs: config
+    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
     uses: ./.github/workflows/backend-ci.yml
 
   build-push:
+    needs: [config, run-ci]
+    if: ${{ !cancelled() && needs.run-ci.result == 'success' && (inputs.environment || needs.config.outputs.run-cd == 'true') }}
     runs-on: ubuntu-latest
-    needs: run-ci
     outputs:
       image-tag: ${{ steps.tags.outputs.COMMIT_TAG }}
     defaults:
@@ -74,23 +90,40 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    environment: prod
+    needs: [config, build-push]
+    if: ${{ !cancelled() && needs.build-push.result == 'success' }}
+    environment: ${{ inputs.environment || needs.config.outputs.environment }}
     runs-on: ubuntu-latest
-    needs: build-push
+    env:
+      EC2_PUBLIC_IP: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
 
     steps:
+      # Nothing to deploy to while the environment's infra is down
+      - name: Check Server
+        id: server
+        run: |
+          if [ -z "$EC2_PUBLIC_IP" ]; then
+            echo "::notice::No server in this environment, skipping deploy"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v7
         name: Pull Files
+        if: steps.server.outputs.exists == 'true'
 
       - name: Bundle Config Files
+        if: steps.server.outputs.exists == 'true'
         run: |
           mkdir bundle-config
           cp backend/docker-compose.prod.yml .github/workflows/scripts/redeploy.sh backend/src/main/resources/application.properties backend/src/main/resources/application-prod.properties bundle-config/
 
       - name: Upload Config
+        if: steps.server.outputs.exists == 'true'
         uses: appleboy/scp-action@v1.0.0
         with:
-          host: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
+          host: ${{ env.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
           source: "bundle-config/"
@@ -99,15 +132,18 @@ jobs:
           strip_components: 1
 
       - name: Deploy backend
+        if: steps.server.outputs.exists == 'true'
         uses: appleboy/ssh-action@v1.0.3
         env:
           IMAGE_TAG: ${{ needs.build-push.outputs.image-tag }}
           REDIS_HOST: ${{ inputs.REDIS_HOST || vars.REDIS_HOST }}
           REDIS_AUTH_TOKEN: ${{ secrets.TF_VAR_REDIS_AUTH_TOKEN }}
+          DYNAMO_TABLE: ${{ inputs.DYNAMO_TABLE || vars.DYNAMO_TABLE }}
+          USER_FILES_BUCKET: ${{ inputs.USER_FILES_BUCKET || vars.USER_FILES_BUCKET }}
         with:
-          host: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
+          host: ${{ env.EC2_PUBLIC_IP }}
           username: admin
           key: ${{ secrets.SSH_KEY }}
-          envs: IMAGE_TAG,REDIS_HOST,REDIS_AUTH_TOKEN
+          envs: IMAGE_TAG,REDIS_HOST,REDIS_AUTH_TOKEN,DYNAMO_TABLE,USER_FILES_BUCKET
           script: |
             sudo -E bash /tmp/redeploy.sh

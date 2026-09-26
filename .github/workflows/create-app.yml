@@ -1,38 +1,54 @@
 name: create-app
 
+# Run from the environment's branch: main creates prod, any other branch its own environment
+
 on:
   workflow_dispatch:
 
 concurrency:
-  group: production-lifecycle
+  group: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-lifecycle
   cancel-in-progress: false
 
 jobs:
+  config:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/env-config.yml
+
   infra-cd:
+    needs: config
+    if: needs.config.outputs.run-cd == 'true'
     permissions:
       id-token: write
-      pull-requests: write
       contents: read
     uses: ./.github/workflows/infra-cd.yml
+    with:
+      environment: ${{ needs.config.outputs.environment }}
     secrets: inherit
 
   frontend-cd:
+    needs: [config, infra-cd]
+    if: needs.infra-cd.outputs.FRONTEND_ENABLED == 'true'
     permissions:
       id-token: write
       contents: read
-    needs: infra-cd
     uses: ./.github/workflows/frontend-cd.yml
     with:
+      environment: ${{ needs.config.outputs.environment }}
+      FRONTEND_BUCKET: ${{ needs.infra-cd.outputs.FRONTEND_BUCKET }}
       CLOUDFRONT_ID: ${{ needs.infra-cd.outputs.CLOUDFRONT_ID }}
     secrets: inherit
 
   backend-cd:
+    needs: [config, infra-cd]
     permissions:
       contents: read
       packages: write
-    needs: infra-cd
     uses: ./.github/workflows/backend-cd.yml
     with:
+      environment: ${{ needs.config.outputs.environment }}
       EC2_PUBLIC_IP: ${{ needs.infra-cd.outputs.EC2_PUBLIC_IP }}
       REDIS_HOST: ${{ needs.infra-cd.outputs.REDIS_HOST }}
+      DYNAMO_TABLE: ${{ needs.infra-cd.outputs.DYNAMO_TABLE }}
+      USER_FILES_BUCKET: ${{ needs.infra-cd.outputs.USER_FILES_BUCKET }}
     secrets: inherit

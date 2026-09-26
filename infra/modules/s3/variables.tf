@@ -1,11 +1,16 @@
-variable "mint_frontend" {
+variable "name" {
+  type        = string
+  description = "Name prefix for this environment's resources"
+}
+
+variable "subdomain" {
   type = string
 }
 
-variable "mint_user_files" {
-  type = string
+variable "frontend_enabled" {
+  type = bool
 }
 
-variable "domain_name" {
-  type = string
+variable "user_files_enabled" {
+  type = bool
 }

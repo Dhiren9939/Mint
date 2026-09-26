@@ -12,6 +12,9 @@ inputs:
     required: true
   working-directory:
     required: true
+  environment:
+    description: "The environment whose Terraform state to use"
+    required: true
 
 runs:
   using: composite
@@ -27,4 +30,6 @@ runs:
 
     - shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: terraform init
+      env:
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: terraform init -input=false -backend-config="key=projects/mint/$ENVIRONMENT.tfstate"

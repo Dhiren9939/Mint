@@ -2,53 +2,77 @@ name: infra-cd
 
 on:
   workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
     outputs:
       EC2_PUBLIC_IP:
         value: ${{ jobs.apply.outputs.EC2_PUBLIC_IP }}
-      CLOUDFRONT_ID:
-        value: ${{ jobs.apply.outputs.CLOUDFRONT_ID }}
       REDIS_HOST:
         value: ${{ jobs.apply.outputs.REDIS_HOST }}
+      DYNAMO_TABLE:
+        value: ${{ jobs.apply.outputs.DYNAMO_TABLE }}
+      USER_FILES_BUCKET:
+        value: ${{ jobs.apply.outputs.USER_FILES_BUCKET }}
+      FRONTEND_ENABLED:
+        value: ${{ jobs.apply.outputs.FRONTEND_ENABLED }}
+      FRONTEND_BUCKET:
+        value: ${{ jobs.apply.outputs.FRONTEND_BUCKET }}
+      CLOUDFRONT_ID:
+        value: ${{ jobs.apply.outputs.CLOUDFRONT_ID }}
   workflow_dispatch:
   push:
-    branches: [main]
     paths:
       - "infra/**"
       - ".github/workflows/infra-ci.yml"
       - ".github/workflows/infra-cd.yml"
+      - ".github/workflows/env-config.yml"
       - ".github/workflows/scripts/**"
       - ".github/actions/setup-aws-terraform/**"
 
-
-
 concurrency:
-  group: production-infrastructure
+  group: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || github.ref_name) }}-infrastructure
   cancel-in-progress: false
 
 jobs:
+  # Callers pass the environment and have already checked the toggles
+  config:
+    if: ${{ !inputs.environment }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/env-config.yml
+
   run-ci:
-    if: vars.CICD_ENABLED != 'false'
+    needs: config
+    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
     permissions:
       id-token: write
       contents: read
-      pull-requests: write
     uses: ./.github/workflows/infra-ci.yml
     with:
-      environment: prod
+      environment: ${{ inputs.environment || needs.config.outputs.environment }}
     secrets: inherit
 
   apply:
-    environment: prod
+    needs: [config, run-ci]
+    if: ${{ !cancelled() && needs.run-ci.result == 'success' && (inputs.environment || needs.config.outputs.run-cd == 'true') }}
+    environment: ${{ inputs.environment || needs.config.outputs.environment }}
     permissions:
       id-token: write
       contents: read
     outputs:
       EC2_PUBLIC_IP: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
-      CLOUDFRONT_ID: ${{ steps.tf_out.outputs.CLOUDFRONT_ID }}
       REDIS_HOST: ${{ steps.tf_out.outputs.REDIS_HOST }}
+      DYNAMO_TABLE: ${{ steps.tf_out.outputs.DYNAMO_TABLE }}
+      USER_FILES_BUCKET: ${{ steps.tf_out.outputs.USER_FILES_BUCKET }}
+      FRONTEND_ENABLED: ${{ steps.tf_out.outputs.FRONTEND_ENABLED }}
+      FRONTEND_BUCKET: ${{ steps.tf_out.outputs.FRONTEND_BUCKET }}
+      CLOUDFRONT_ID: ${{ steps.tf_out.outputs.CLOUDFRONT_ID }}
 
-    needs: run-ci
     runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ inputs.environment || needs.config.outputs.environment }}
     defaults:
       run:
         working-directory: ./infra
@@ -63,26 +87,47 @@ jobs:
           aws-region: ap-south-1
           role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
           working-directory: "./infra"
+          environment: ${{ env.ENVIRONMENT }}
 
       - name: Terraform Apply
         env:
           TF_VAR_REDIS_AUTH_TOKEN: ${{ secrets.TF_VAR_REDIS_AUTH_TOKEN }}
-        run: terraform apply -no-color -input=false -auto-approve
+        run: terraform apply -no-color -input=false -auto-approve -var-file="envs/$ENVIRONMENT.tfvars"
 
       - name: Output Resource Details
         id: tf_out
         run: |
-          echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
-          echo "CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
-          echo "REDIS_HOST=$(terraform output -raw redis_endpoint)" >> $GITHUB_OUTPUT
+          terraform output -json > /tmp/tf-outputs.json
+          out() { jq -r --arg k "$1" '.[$k].value // empty' /tmp/tf-outputs.json; }
+          {
+            echo "EC2_PUBLIC_IP=$(out ec2_public_ip)"
+            echo "REDIS_HOST=$(out redis_endpoint)"
+            echo "DYNAMO_TABLE=$(out table_name)"
+            echo "USER_FILES_BUCKET=$(out user_files_bucket)"
+            echo "FRONTEND_ENABLED=$(out frontend_enabled)"
+            echo "FRONTEND_BUCKET=$(out frontend_bucket_name)"
+            echo "CLOUDFRONT_ID=$(out cloudfront_distribution_id)"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Update Repo Variables
+      - name: Update Environment Variables
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          EC2_PUBLIC_IP: ${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}
+          REDIS_HOST: ${{ steps.tf_out.outputs.REDIS_HOST }}
+          DYNAMO_TABLE: ${{ steps.tf_out.outputs.DYNAMO_TABLE }}
+          USER_FILES_BUCKET: ${{ steps.tf_out.outputs.USER_FILES_BUCKET }}
+          FRONTEND_BUCKET: ${{ steps.tf_out.outputs.FRONTEND_BUCKET }}
+          CLOUDFRONT_ID: ${{ steps.tf_out.outputs.CLOUDFRONT_ID }}
         run: |
-          gh variable set EC2_PUBLIC_IP --body "${{ steps.tf_out.outputs.EC2_PUBLIC_IP }}"
-          gh variable set CLOUDFRONT_ID --body "${{ steps.tf_out.outputs.CLOUDFRONT_ID }}"
-          gh variable set REDIS_HOST --body "${{ steps.tf_out.outputs.REDIS_HOST }}"
+          for name in EC2_PUBLIC_IP REDIS_HOST DYNAMO_TABLE USER_FILES_BUCKET FRONTEND_BUCKET CLOUDFRONT_ID; do
+            value="${!name}"
+            if [ -n "$value" ]; then
+              gh variable set "$name" --env "$ENVIRONMENT" --body "$value"
+            else
+              # Resources this environment doesn't have, e.g. no frontend
+              gh variable delete "$name" --env "$ENVIRONMENT" || true
+            fi
+          done
 
       - name: SCP scripts
         uses: appleboy/scp-action@v1.0.0

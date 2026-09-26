@@ -9,6 +9,8 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       REDIS_HOST: ${REDIS_HOST:?REDIS_HOST must be set}
       REDIS_AUTH_TOKEN: ${REDIS_AUTH_TOKEN:?REDIS_AUTH_TOKEN must be set}
+      USER_FILES_BUCKET: ${USER_FILES_BUCKET:?USER_FILES_BUCKET must be set}
+      DYNAMO_TABLE: ${DYNAMO_TABLE:?DYNAMO_TABLE must be set}
       JAVA_TOOL_OPTIONS: >-
         -XX:MaxRAMPercentage=85.0
         -XX:InitialRAMPercentage=40.0

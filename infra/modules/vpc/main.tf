@@ -42,12 +42,25 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 }
 
 resource "aws_security_group_rule" "cloudfront_to_ec2" {
+  count = var.cloudfront_origin ? 1 : 0
+
   type              = "ingress"
   security_group_id = aws_security_group.ec2_sg.id
   protocol          = "tcp"
   from_port         = 80
   to_port           = 80
   prefix_list_ids   = [data.aws_ec2_managed_prefix_list.cloudfront.id]
+}
+
+resource "aws_security_group_rule" "api_to_ec2" {
+  count = !var.cloudfront_origin && length(var.api_ingress_cidrs) > 0 ? 1 : 0
+
+  type              = "ingress"
+  security_group_id = aws_security_group.ec2_sg.id
+  protocol          = "tcp"
+  from_port         = 80
+  to_port           = 80
+  cidr_blocks       = var.api_ingress_cidrs
 }
 
 resource "aws_security_group_rule" "allow_ssh" {
@@ -81,12 +94,12 @@ resource "aws_subnet" "private_b" {
 }
 
 resource "aws_elasticache_subnet_group" "cache" {
-  name       = "mint-cache-subnets"
+  name       = "${var.name}-cache-subnets"
   subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 }
 
 resource "aws_security_group" "cache_sg" {
-  name   = "mint-cache"
+  name   = "${var.name}-cache"
   vpc_id = aws_vpc.main_vpc.id
 }
 

@@ -1,3 +1,8 @@
+variable "name" {
+  type        = string
+  description = "Name prefix for this environment's resources"
+}
+
 variable "public_subnet_id" {
   type        = string
   description = "The subnet id for EC2"
