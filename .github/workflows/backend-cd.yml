@@ -103,7 +103,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.build-push.outputs.image-tag }}
           REDIS_HOST: ${{ inputs.REDIS_HOST || vars.REDIS_HOST }}
-          REDIS_AUTH_TOKEN: ${{ secrets.REDIS_AUTH_TOKEN }}
+          REDIS_AUTH_TOKEN: ${{ secrets.TF_VAR_REDIS_AUTH_TOKEN }}
         with:
           host: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
           username: admin

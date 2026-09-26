@@ -38,7 +38,7 @@ jobs:
 
       - name: Terraform Destroy
         env:
-          TF_VAR_redis_auth_token: ${{ secrets.REDIS_AUTH_TOKEN }}
+          TF_VAR_REDIS_AUTH_TOKEN: ${{ secrets.TF_VAR_REDIS_AUTH_TOKEN }}
         run: terraform destroy -no-color -input=false -auto-approve
 
       - name: Delete Infra Variables

@@ -52,7 +52,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         env:
-          TF_VAR_redis_auth_token: ${{ secrets.REDIS_AUTH_TOKEN }}
+          TF_VAR_REDIS_AUTH_TOKEN: ${{ secrets.TF_VAR_REDIS_AUTH_TOKEN }}
         run: terraform plan -no-color -input=false -lock-timeout=20m -out .planfile
         continue-on-error: true
 

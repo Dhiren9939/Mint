@@ -70,5 +70,5 @@ module "elasticache" {
   subnet_group_name  = module.vpc.cache_subnet_group_name
   security_group_id  = module.vpc.cache_sg_id
   availability_zones = module.vpc.private_subnet_azs
-  auth_token         = var.redis_auth_token
+  auth_token         = var.REDIS_AUTH_TOKEN
 }
