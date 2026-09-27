@@ -27,7 +27,7 @@ classDiagram
     class CodeGeneratorService
     class FileMetaDataService
 
-    RateLimitFilter --> RedisProxyManagerProvider : fails open when empty
+    RateLimitFilter --> RedisProxyManagerProvider : fail open
     FileSharingController --> FileSharingService
     FileSharingService <|.. S3SharingService
     S3SharingService --> FileStorageService
@@ -53,11 +53,10 @@ classDiagram
         <<Repository>>
     }
     class FileMetaDataStore {
-        <<planned, Primary>>
-        write-through, fails open
+        <<planned>>
     }
     class FileMetaDataCache {
-        <<interface, planned>>
+        <<interface>>
         +get(String) Optional~FileMetaData~
         +put(FileMetaData)
         +evict(String)
@@ -66,14 +65,14 @@ classDiagram
         <<planned>>
     }
     class NoOpFileMetaDataCache {
-        <<planned, mint.cache.enabled=false>>
+        <<planned>>
     }
 
     CodeGeneratorService --> FileMetaDataRepository
     FileMetaDataService --> FileMetaDataRepository
     FileMetaDataRepository <|.. DynamoFileMetaDataRepository
     FileMetaDataRepository <|.. FileMetaDataStore
-    FileMetaDataStore --> DynamoFileMetaDataRepository : delegate (Qualifier)
+    FileMetaDataStore --> DynamoFileMetaDataRepository : delegate
     FileMetaDataStore --> FileMetaDataCache
     FileMetaDataCache <|.. RedisFileMetaDataCache
     FileMetaDataCache <|.. NoOpFileMetaDataCache
@@ -95,7 +94,7 @@ classDiagram
 
     class FileMetaData {
         <<DynamoDbBean>>
-        fileCode : partition key
+        fileCode
         fileKey
         cleanAt
         fileState
@@ -121,7 +120,7 @@ classDiagram
 
     FileMetaData --> FileState
     FileMetaData --> ExpiryDuration
-    FileMetaData ..> EpochSecondLocalDateTimeConverter : cleanAt
+    FileMetaData ..> EpochSecondLocalDateTimeConverter : cleanAt field
     FileMetaDataBuilder ..> FileMetaData : builds
 
     class ConfirmUploadRequest
