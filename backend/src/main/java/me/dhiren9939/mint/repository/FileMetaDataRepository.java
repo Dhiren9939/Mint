@@ -11,8 +11,5 @@ public interface FileMetaDataRepository {
 
     Optional<FileMetaData> findByFileKeyAndFileCode(String fileKey, String fileCode);
 
-    /**
-     * A code is free when nothing exists under it, or the file under it is already DELETED.
-     */
     boolean isFileCodeFree(String fileCode);
 }
