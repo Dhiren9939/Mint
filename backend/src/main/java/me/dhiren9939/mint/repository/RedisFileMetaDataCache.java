@@ -36,7 +36,7 @@ public class RedisFileMetaDataCache implements FileMetaDataCache {
     private final RedisConnectionProvider redisConnectionProvider;
     private final ObjectMapper objectMapper;
 
-    @Value("${mint.cache.ttl-seconds:60}")
+    @Value("${mint.cache.ttl-seconds:300}")
     private long ttlSeconds;
 
     @Override
