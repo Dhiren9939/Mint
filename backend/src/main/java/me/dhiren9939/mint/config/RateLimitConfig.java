@@ -5,6 +5,7 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.SocketOptions;
 import io.lettuce.core.TimeoutOptions;
+import me.dhiren9939.mint.common.RedisConnectionProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -65,7 +66,7 @@ public class RateLimitConfig {
     }
 
     @Bean(destroyMethod = "close")
-    public RedisProxyManagerProvider redisProxyManagerProvider(RedisClient redisClient) {
-        return new RedisProxyManagerProvider(redisClient, redisUri());
+    public RedisConnectionProvider redisConnectionProvider(RedisClient redisClient) {
+        return new RedisConnectionProvider(redisClient, redisUri());
     }
 }

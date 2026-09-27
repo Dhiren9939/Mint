@@ -12,7 +12,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 
 import java.util.Optional;
 
-@Repository
+@Repository("dynamoDbRepository")
 public class DynamoFileMetaDataRepository implements FileMetaDataRepository {
 
     private final DynamoDbTable<FileMetaData> table;

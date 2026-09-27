@@ -1,4 +1,4 @@
-package me.dhiren9939.mint.config;
+package me.dhiren9939.mint.common;
 
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
@@ -22,11 +22,13 @@ import java.util.concurrent.TimeUnit;
 /**
  * Connects to Redis in the background so an unreachable cache never blocks startup.
  * Failed attempts are retried with exponential backoff (2s, 4s, 8s, ... capped) plus jitter.
- * {@link #get()} is empty whenever there is no open connection, and callers skip rate limiting.
+ * The single connection here is shared by every Redis consumer in the app (rate limiting,
+ * caching, ...); {@link #getConnection()} and {@link #getProxyManager()} are empty whenever
+ * there is no open connection, and callers fail open instead of blocking on Redis.
  * Once connected, Lettuce's auto reconnect handles later drops such as a failover.
  */
 @Slf4j
-public class RedisProxyManagerProvider implements AutoCloseable {
+public class RedisConnectionProvider implements AutoCloseable {
 
     private static final long BASE_DELAY_MS = 2_000;
     private static final long MAX_DELAY_MS = 30_000;
@@ -44,18 +46,29 @@ public class RedisProxyManagerProvider implements AutoCloseable {
     private volatile boolean closed;
     private int attempt;
 
-    public RedisProxyManagerProvider(RedisClient client, RedisURI uri) {
+    public RedisConnectionProvider(RedisClient client, RedisURI uri) {
         this.client = client;
         this.uri = uri;
         connect();
     }
 
-    public Optional<ProxyManager<String>> get() {
+    /**
+     * The shared connection (String keys, byte[] values). Any Redis consumer can use it
+     * directly, encoding its own values as bytes.
+     */
+    public Optional<StatefulRedisConnection<String, byte[]>> getConnection() {
         StatefulRedisConnection<String, byte[]> conn = connection;
         if (conn == null || !conn.isOpen()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(proxyManager);
+        return Optional.of(conn);
+    }
+
+    /**
+     * The Bucket4j proxy manager built on top of the shared connection, for rate limiting.
+     */
+    public Optional<ProxyManager<String>> getProxyManager() {
+        return getConnection().map(conn -> proxyManager);
     }
 
     private void connect() {
@@ -81,7 +94,7 @@ public class RedisProxyManagerProvider implements AutoCloseable {
                                         .basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(1)))
                                 .build();
                         connection = conn;
-                        log.info("Connected to Redis for rate limiting");
+                        log.info("Connected to Redis");
                     });
         } catch (RuntimeException e) {
             retryLater(e);

@@ -1,5 +1,6 @@
 package me.dhiren9939.mint.config;
 
+import me.dhiren9939.mint.common.RedisConnectionProvider;
 import me.dhiren9939.mint.filter.RateLimitFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -38,9 +39,9 @@ public class SecurityConfig {
    }
 
     @Bean
-    public RateLimitFilter rateLimitFilter(RedisProxyManagerProvider proxyManagerProvider,
+    public RateLimitFilter rateLimitFilter(RedisConnectionProvider redisConnectionProvider,
                                            ObjectMapper objectMapper) {
-        return new RateLimitFilter(proxyManagerProvider, objectMapper);
+        return new RateLimitFilter(redisConnectionProvider, objectMapper);
     }
 
     @Bean

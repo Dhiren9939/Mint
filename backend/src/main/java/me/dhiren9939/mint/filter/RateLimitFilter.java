@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.common.ApiError;
 import me.dhiren9939.mint.common.ApiResponse;
-import me.dhiren9939.mint.config.RedisProxyManagerProvider;
+import me.dhiren9939.mint.common.RedisConnectionProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
@@ -50,7 +50,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Value("${spring.profiles.active:dev}")
     private String profile;
 
-    private final RedisProxyManagerProvider proxyManagerProvider;
+    private final RedisConnectionProvider redisConnectionProvider;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -58,7 +58,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                  HttpServletResponse response,
                                  FilterChain filterChain) throws ServletException, IOException {
 
-        Optional<ProxyManager<String>> proxyManager = proxyManagerProvider.get();
+        Optional<ProxyManager<String>> proxyManager = redisConnectionProvider.getProxyManager();
         if (proxyManager.isEmpty()) {
             // Fail open, no rate limiting at all while the cache is unavailable
             filterChain.doFilter(request, response);
