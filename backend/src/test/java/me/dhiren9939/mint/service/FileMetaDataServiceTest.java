@@ -26,6 +26,9 @@ class FileMetaDataServiceTest {
     @Mock
     private FileMetaDataRepository fileMetaDataRepository;
 
+    @Mock
+    private FileStorageService fileStorageService;
+
     @InjectMocks
     private FileMetaDataService fileMetaDataService;
 
@@ -95,6 +98,7 @@ class FileMetaDataServiceTest {
         ArgumentCaptor<FileMetaData> captor = ArgumentCaptor.forClass(FileMetaData.class);
         verify(fileMetaDataRepository).save(captor.capture());
         assertEquals(FileState.DELETED, captor.getValue().getFileState());
+        verify(fileStorageService).deleteFile("key.txt");
     }
 
     @Test
@@ -175,5 +179,24 @@ class FileMetaDataServiceTest {
         ArgumentCaptor<FileMetaData> captor = ArgumentCaptor.forClass(FileMetaData.class);
         verify(fileMetaDataRepository).save(captor.capture());
         assertEquals(FileState.DELETED, captor.getValue().getFileState());
+        verify(fileStorageService).deleteFile("key.txt");
+    }
+
+    @Test
+    @DisplayName("getForDownload: does not delete from storage when the file is still valid")
+    void getForDownload_doesNotDeleteWhenValid() {
+        FileMetaData valid = FileMetaDataBuilder.builder()
+                .fileCode("abc123")
+                .fileKey("key.txt")
+                .cleanAt(LocalDateTime.now().plusMinutes(10))
+                .fileState(FileState.READY)
+                .fileExpiryDuration(ExpiryDuration.MINUTES15)
+                .build();
+
+        when(fileMetaDataRepository.findByFileCode("abc123")).thenReturn(Optional.of(valid));
+
+        fileMetaDataService.getForDownload("abc123");
+
+        verify(fileStorageService, never()).deleteFile(any());
     }
 }

@@ -17,6 +17,7 @@ import java.util.Optional;
 @AllArgsConstructor
 public class FileMetaDataService {
     private final FileMetaDataRepository fileMetaDataRepository;
+    private final FileStorageService fileStorageService;
 
     public FileMetaData createPending(String fileKey, String fileCode, ExpiryDuration duration) {
         FileMetaData fileMetaData = FileMetaDataBuilder.builder()
@@ -39,6 +40,7 @@ public class FileMetaDataService {
         if (metaData.getCleanAt().isBefore(LocalDateTime.now())) {
             metaData.setFileState(FileState.DELETED);
             fileMetaDataRepository.save(metaData);
+            deleteFromStorage(metaData.getFileKey());
             throw new FileMetaDataNotFoundException();
         }
 
@@ -69,11 +71,20 @@ public class FileMetaDataService {
             // Mark Deleted.
             fileMetaData.setFileState(FileState.DELETED);
             fileMetaDataRepository.save(fileMetaData);
+            deleteFromStorage(fileMetaData.getFileKey());
 
             throw new FileMetaDataNotFoundException();
         }
 
         return fileMetaData;
+    }
+
+    private void deleteFromStorage(String fileKey) {
+        try {
+            fileStorageService.deleteFile(fileKey);
+        } catch (RuntimeException e) {
+            log.warn("Failed to delete {} from storage: {}", fileKey, e.toString());
+        }
     }
 
     private LocalDateTime getExpiresAt(ExpiryDuration duration) {
