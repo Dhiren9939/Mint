@@ -3,12 +3,10 @@ package me.dhiren9939.mint.service;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.exception.FileCodeGenerationFailure;
-import me.dhiren9939.mint.entity.FileMetaData;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -36,8 +34,7 @@ public class CodeGeneratorService {
     public String getUniqueFileCode() throws FileCodeGenerationFailure {
         for (int i = 0; i < 2; i++) {
             String fileCode = this.getRandomCode();
-            Optional<FileMetaData> metaDataOptional = fileMetaDataRepository.findByFileCode(fileCode);
-            if (metaDataOptional.isEmpty())
+            if (fileMetaDataRepository.isFileCodeFree(fileCode))
                 return fileCode;
         }
 

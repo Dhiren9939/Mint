@@ -1,6 +1,7 @@
 package me.dhiren9939.mint.repository;
 
 import me.dhiren9939.mint.entity.FileMetaData;
+import me.dhiren9939.mint.entity.FileState;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -37,6 +38,13 @@ public class DynamoFileMetaDataRepository implements FileMetaDataRepository {
         return Optional
                 .ofNullable(table.getItem(consistentGet(fileCode)))
                 .filter(fileMetaData -> fileMetaData.getFileKey().equals(fileKey));
+    }
+
+    @Override
+    public boolean isFileCodeFree(String fileCode) {
+        return Optional.ofNullable(table.getItem(consistentGet(fileCode)))
+                .map(fileMetaData -> fileMetaData.getFileState() == FileState.DELETED)
+                .orElse(true);
     }
 
     private GetItemEnhancedRequest consistentGet(String fileCode) {

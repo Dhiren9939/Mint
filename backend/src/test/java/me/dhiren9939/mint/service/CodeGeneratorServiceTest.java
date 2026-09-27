@@ -2,18 +2,13 @@ package me.dhiren9939.mint.service;
 
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.exception.FileCodeGenerationFailure;
-import me.dhiren9939.mint.entity.FileMetaData;
 import me.dhiren9939.mint.repository.FileMetaDataRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.stubbing.Answer;
-
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,6 +27,8 @@ class CodeGeneratorServiceTest {
     @Test
     @DisplayName("Should return a 6 digit code")
     public void shouldReturnFileCode() {
+        when(fileMetaDataRepository.isFileCodeFree(any(String.class))).thenReturn(true);
+
         String result = codeGeneratorService.getUniqueFileCode();
         assertEquals(6, result.length());
     }
@@ -39,17 +36,11 @@ class CodeGeneratorServiceTest {
     @Test
     @DisplayName("Should retry on collision and return code")
     public void shouldRetryOnCollisionAndReturnCode() {
-        Answer<Optional<FileMetaData>> returnMetaDataWithId = (InvocationOnMock invocation) -> {
-            FileMetaData metaData = new FileMetaData();
-            metaData.setFileCode(invocation.getArgument(0));
-            return Optional.of(metaData);
-        };
-
-        when(fileMetaDataRepository.findByFileCode(any(String.class))).thenAnswer(returnMetaDataWithId).thenReturn(Optional.empty());
+        when(fileMetaDataRepository.isFileCodeFree(any(String.class))).thenReturn(false, true);
 
         String result = codeGeneratorService.getUniqueFileCode();
 
-        verify(fileMetaDataRepository, times(2)).findByFileCode(any(String.class));
+        verify(fileMetaDataRepository, times(2)).isFileCodeFree(any(String.class));
 
         assertNotNull(result);
     }
@@ -57,18 +48,12 @@ class CodeGeneratorServiceTest {
     @Test
     @DisplayName("Should throw an exception back")
     public void shouldThrowAnExceptionBack() {
-        Answer<Optional<FileMetaData>> returnMetaDataWithId = (InvocationOnMock invocation) -> {
-            FileMetaData metaData = new FileMetaData();
-            metaData.setFileCode(invocation.getArgument(0));
-            return Optional.of(metaData);
-        };
-
-        when(fileMetaDataRepository.findByFileCode(any(String.class))).thenAnswer(returnMetaDataWithId).thenAnswer(returnMetaDataWithId);
+        when(fileMetaDataRepository.isFileCodeFree(any(String.class))).thenReturn(false, false);
 
         assertThrows(FileCodeGenerationFailure.class, () -> {
             codeGeneratorService.getUniqueFileCode();
         });
 
-        verify(fileMetaDataRepository, times(2)).findByFileCode(any(String.class));
+        verify(fileMetaDataRepository, times(2)).isFileCodeFree(any(String.class));
     }
 }
