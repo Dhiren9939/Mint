@@ -64,6 +64,10 @@ public class RedisConnectionProvider implements AutoCloseable {
         return Optional.of(conn);
     }
 
+    public String getHost() {
+        return uri.getHost();
+    }
+
     /**
      * The Bucket4j proxy manager built on top of the shared connection, for rate limiting.
      */

@@ -90,7 +90,6 @@ npm run build
 ## Notes
 
 - The repository currently does not include a formal open source license.
-- The root project includes a production Docker Compose file at `backend/docker-compose.prod.yml`.
 
 ## Contributing
 
