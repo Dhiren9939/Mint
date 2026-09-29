@@ -34,9 +34,13 @@ resource "aws_route53_record" "mint_aaaa" {
 resource "aws_route53_record" "api_a" {
   count = var.use_cloudfront ? 0 : 1
 
+  alias {
+    evaluate_target_health = true
+    name                   = var.alb_dns_name
+    zone_id                = var.alb_zone_id
+  }
+
   name    = var.subdomain
   type    = "A"
-  ttl     = 60
-  records = [var.server_ip]
   zone_id = var.zone_id
 }

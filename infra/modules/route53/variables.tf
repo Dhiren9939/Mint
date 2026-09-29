@@ -9,7 +9,7 @@ variable "zone_id" {
 }
 
 variable "use_cloudfront" {
-  description = "Point the domain at CloudFront, otherwise straight at the server"
+  description = "Point the domain at CloudFront, otherwise straight at the public ALB"
   type        = bool
 }
 
@@ -19,7 +19,12 @@ variable "cdn_domain" {
   default     = null
 }
 
-variable "server_ip" {
-  description = "The public IP of the API server"
+variable "alb_dns_name" {
+  description = "The API load balancer's DNS name"
+  type        = string
+}
+
+variable "alb_zone_id" {
+  description = "The API load balancer's hosted zone id"
   type        = string
 }

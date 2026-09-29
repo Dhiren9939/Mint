@@ -1,23 +1,31 @@
-resource "aws_iam_role" "mint_api_role" {
-  name = "${var.name}-api-role"
+data "aws_caller_identity" "current" {}
 
-  assume_role_policy = jsonencode({
+locals {
+  // Only ECS tasks in this account may assume the roles below
+  ecs_tasks_trust_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow",
         Principal = {
-          Service = "ec2.amazonaws.com"
+          Service = "ecs-tasks.amazonaws.com"
         }
         Action = "sts:AssumeRole"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
       }
     ]
   })
 }
 
-resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "${var.name}-instance-profile"
-  role = aws_iam_role.mint_api_role.name
+# ---------- Task role: what the app's own AWS calls run as ----------
+
+resource "aws_iam_role" "mint_api_role" {
+  name               = "${var.name}-api-role"
+  assume_role_policy = local.ecs_tasks_trust_policy
 }
 
 resource "aws_iam_role_policy_attachment" "attach_mint_api_policy" {
@@ -53,5 +61,36 @@ resource "aws_iam_policy" "mint_api_role_policy" {
         }
       ]
     )
+  })
+}
+
+# ---------- Execution role: what ECS uses to start the task ----------
+
+resource "aws_iam_role" "execution_role" {
+  name               = "${var.name}-api-execution-role"
+  assume_role_policy = local.ecs_tasks_trust_policy
+}
+
+// Pull images and write logs
+resource "aws_iam_role_policy_attachment" "execution_role_ecs" {
+  role       = aws_iam_role.execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+// Read the secrets injected into the container. They use the AWS managed SSM key,
+// which needs no extra KMS permission
+resource "aws_iam_role_policy" "execution_role_secrets" {
+  name = "read-secrets"
+  role = aws_iam_role.execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = "ssm:GetParameters",
+        Resource = var.secret_parameter_arns
+      }
+    ]
   })
 }

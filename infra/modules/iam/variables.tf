@@ -12,3 +12,8 @@ variable "user_files_bucket_arn" {
 variable "file_meta_data_table_arn" {
   type = string
 }
+
+variable "secret_parameter_arns" {
+  description = "SSM parameters ECS reads to inject secrets into the container"
+  type        = list(string)
+}

@@ -1,3 +1,51 @@
+locals {
+  api_origin_id = "ALB-${var.name}-api"
+}
+
+// nosniff, frame options, HSTS and referrer policy on API responses
+data "aws_cloudfront_response_headers_policy" "security_headers" {
+  name = "Managed-SecurityHeadersPolicy"
+}
+
+// CloudFront reaches the internal ALB through a network interface in the VPC; the ALB has no
+// public address. HTTP between them never leaves AWS's network, viewers still use HTTPS
+resource "aws_cloudfront_vpc_origin" "api" {
+  vpc_origin_endpoint_config {
+    name                   = "${var.name}-api"
+    arn                    = var.alb_arn
+    http_port              = 80
+    https_port             = 443
+    origin_protocol_policy = "http-only"
+
+    origin_ssl_protocols {
+      items    = ["TLSv1.2"]
+      quantity = 1
+    }
+  }
+}
+
+// Created by CloudFront along with the first VPC origin in the VPC. Admitting only this group
+// lets only this account's distributions in, unlike the CloudFront prefix list
+data "aws_security_group" "vpc_origins" {
+  vpc_id = var.vpc_id
+
+  filter {
+    name   = "group-name"
+    values = ["CloudFront-VPCOrigins-Service-SG*"]
+  }
+
+  depends_on = [aws_cloudfront_vpc_origin.api]
+}
+
+resource "aws_security_group_rule" "cloudfront_to_alb" {
+  type                     = "ingress"
+  security_group_id        = var.alb_sg_id
+  protocol                 = "tcp"
+  from_port                = 80
+  to_port                  = 80
+  source_security_group_id = data.aws_security_group.vpc_origins.id
+}
+
 resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   default_root_object = "index.html"
@@ -22,14 +70,11 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   origin {
-    domain_name = var.backend_ec2_domain_name
-    origin_id   = "EC2-${var.backend_ec2_domain_name}"
+    domain_name = var.alb_dns_name
+    origin_id   = local.api_origin_id
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+    vpc_origin_config {
+      vpc_origin_id = aws_cloudfront_vpc_origin.api.id
     }
   }
 
@@ -43,11 +88,12 @@ resource "aws_cloudfront_distribution" "cdn" {
     path_pattern           = "/api/*"
     allowed_methods        = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "EC2-${var.backend_ec2_domain_name}"
+    target_origin_id       = local.api_origin_id
     viewer_protocol_policy = "redirect-to-https"
     // AWS Managed Policies for Caching Optimized and Caching Disabled
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.api_cookies.id
+    cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id   = aws_cloudfront_origin_request_policy.api_cookies.id
+    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
   }
 
   default_cache_behavior {

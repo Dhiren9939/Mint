@@ -2,20 +2,20 @@ output "vpc_id" {
   value = module.vpc.main_vpc_id
 }
 
-output "public_subnet_id" {
-  value = module.vpc.public_subnet_id
+output "ecs_cluster" {
+  value = module.ecs.cluster_name
 }
 
-output "ec2_public_ip" {
-  value = module.ec2.server_public_ip
+output "ecs_service" {
+  value = module.ecs.service_name
 }
 
-output "ec2_public_dns" {
-  value = module.ec2.server_public_dns
+output "task_family" {
+  value = module.ecs.task_family
 }
 
-output "server_instance_id" {
-  value = module.ec2.server_instance_id
+output "alb_dns_name" {
+  value = module.ecs.alb_dns_name
 }
 
 output "redis_endpoint" {
