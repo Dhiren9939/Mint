@@ -141,7 +141,7 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           service: ${{ env.ECS_SERVICE }}
           wait-for-service-stability: true
-          wait-for-minutes: 15
+          wait-for-minutes: 5
 
       # The deploy action can return while the rollout is still in progress, and a deploy the
       # circuit breaker rolled back also ends stable, so wait for the rollout and check what runs
