@@ -143,14 +143,21 @@ jobs:
           wait-for-service-stability: true
           wait-for-minutes: 15
 
-      # A deploy the circuit breaker rolled back also ends stable, so check what is actually running
+      # The deploy action can return while the rollout is still in progress, and a deploy the
+      # circuit breaker rolled back also ends stable, so wait for the rollout and check what runs
       - name: Verify Rollout
         if: steps.service.outputs.exists == 'true'
+        timeout-minutes: 15
         env:
           EXPECTED: ${{ steps.deploy.outputs.task-definition-arn }}
         run: |
-          read -r running state <<< "$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" \
-            --query "services[0].deployments[?status=='PRIMARY'] | [0].[taskDefinition, rolloutState]" --output text)"
+          while true; do
+            read -r running state <<< "$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" \
+              --query "services[0].deployments[?status=='PRIMARY'] | [0].[taskDefinition, rolloutState]" --output text)"
+            [ "$state" != "IN_PROGRESS" ] && break
+            echo "Rollout of $running in progress"
+            sleep 15
+          done
           if [ "$running" != "$EXPECTED" ] || [ "$state" != "COMPLETED" ]; then
             echo "::error::Deploy did not complete, the service runs $running ($state) instead of $EXPECTED"
             exit 1
