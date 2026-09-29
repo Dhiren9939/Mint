@@ -131,7 +131,8 @@ jobs:
           container-name: api
           image: ${{ needs.build-push.outputs.image-tag }}
 
-      # Registers the new revision and starts a rolling deploy
+      # Registers the new revision and starts a rolling deploy. Its own waiter backs off between
+      # checks and can miss a finished rollout, so the next step does the waiting
       - name: Deploy to ECS
         id: deploy
         if: steps.service.outputs.exists == 'true'
@@ -140,14 +141,13 @@ jobs:
           task-definition: ${{ steps.render.outputs.task-definition }}
           cluster: ${{ env.ECS_CLUSTER }}
           service: ${{ env.ECS_SERVICE }}
-          wait-for-service-stability: true
-          wait-for-minutes: 5
+          wait-for-service-stability: false
 
-      # The deploy action can return while the rollout is still in progress, and a deploy the
-      # circuit breaker rolled back also ends stable, so wait for the rollout and check what runs
+      # Waits for the rollout, then checks what actually runs: a deploy the circuit breaker
+      # rolled back also ends stable
       - name: Verify Rollout
         if: steps.service.outputs.exists == 'true'
-        timeout-minutes: 15
+        timeout-minutes: 5
         env:
           EXPECTED: ${{ steps.deploy.outputs.task-definition-arn }}
         run: |
