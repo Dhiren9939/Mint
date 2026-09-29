@@ -13,7 +13,6 @@ on:
       - ".github/workflows/backend-ci.yml"
       - ".github/workflows/backend-cd.yml"
       - ".github/workflows/env-config.yml"
-      - ".github/workflows/scripts/redeploy.sh"
 
 jobs:
   # Callers have already checked the toggles

@@ -6,16 +6,13 @@ on:
       environment:
         type: string
         required: true
-      EC2_PUBLIC_IP:
+      ECS_CLUSTER:
         type: string
         required: true
-      REDIS_HOST:
+      ECS_SERVICE:
         type: string
         required: true
-      DYNAMO_TABLE:
-        type: string
-        required: true
-      USER_FILES_BUCKET:
+      TASK_FAMILY:
         type: string
         required: true
   workflow_dispatch:
@@ -25,11 +22,11 @@ on:
       - ".github/workflows/backend-ci.yml"
       - ".github/workflows/backend-cd.yml"
       - ".github/workflows/env-config.yml"
-      - ".github/workflows/scripts/redeploy.sh"
 
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 concurrency:
   group: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || github.ref_name) }}-backend
@@ -95,55 +92,67 @@ jobs:
     environment: ${{ inputs.environment || needs.config.outputs.environment }}
     runs-on: ubuntu-latest
     env:
-      EC2_PUBLIC_IP: ${{ inputs.EC2_PUBLIC_IP || vars.EC2_PUBLIC_IP }}
+      ECS_CLUSTER: ${{ inputs.ECS_CLUSTER || vars.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ inputs.ECS_SERVICE || vars.ECS_SERVICE }}
+      TASK_FAMILY: ${{ inputs.TASK_FAMILY || vars.TASK_FAMILY }}
 
     steps:
       # Nothing to deploy to while the environment's infra is down
-      - name: Check Server
-        id: server
+      - name: Check Service
+        id: service
         run: |
-          if [ -z "$EC2_PUBLIC_IP" ]; then
-            echo "::notice::No server in this environment, skipping deploy"
+          if [ -z "$ECS_CLUSTER" ] || [ -z "$ECS_SERVICE" ] || [ -z "$TASK_FAMILY" ]; then
+            echo "::notice::No ECS service in this environment, skipping deploy"
             echo "exists=false" >> "$GITHUB_OUTPUT"
           else
             echo "exists=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v7
-        name: Pull Files
-        if: steps.server.outputs.exists == 'true'
+      - uses: aws-actions/configure-aws-credentials@v6
+        name: Configure AWS Credentials
+        if: steps.service.outputs.exists == 'true'
+        with:
+          aws-region: ap-south-1
+          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
 
-      - name: Bundle Config Files
-        if: steps.server.outputs.exists == 'true'
+      # Terraform owns the task settings (size, env, secrets, roles), so start from its
+      # latest revision and only swap in this commit's image
+      - name: Download Task Definition
+        if: steps.service.outputs.exists == 'true'
         run: |
-          mkdir bundle-config
-          cp backend/docker-compose.prod.yml .github/workflows/scripts/redeploy.sh backend/src/main/resources/application.properties backend/src/main/resources/application-prod.properties bundle-config/
+          aws ecs describe-task-definition --task-definition "$TASK_FAMILY" --query taskDefinition > task-definition.json
 
-      - name: Upload Config
-        if: steps.server.outputs.exists == 'true'
-        uses: appleboy/scp-action@v1.0.0
+      - name: Set Image
+        id: render
+        if: steps.service.outputs.exists == 'true'
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          host: ${{ env.EC2_PUBLIC_IP }}
-          username: admin
-          key: ${{ secrets.SSH_KEY }}
-          source: "bundle-config/"
-          target: "/tmp/"
-          overwrite: true
-          strip_components: 1
+          task-definition: task-definition.json
+          container-name: api
+          image: ${{ needs.build-push.outputs.image-tag }}
 
-      - name: Deploy backend
-        if: steps.server.outputs.exists == 'true'
-        uses: appleboy/ssh-action@v1.0.3
+      # Registers the new revision and starts a rolling deploy
+      - name: Deploy to ECS
+        id: deploy
+        if: steps.service.outputs.exists == 'true'
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 15
+
+      # A deploy the circuit breaker rolled back also ends stable, so check what is actually running
+      - name: Verify Rollout
+        if: steps.service.outputs.exists == 'true'
         env:
-          IMAGE_TAG: ${{ needs.build-push.outputs.image-tag }}
-          REDIS_HOST: ${{ inputs.REDIS_HOST || vars.REDIS_HOST }}
-          REDIS_AUTH_TOKEN: ${{ secrets.TF_VAR_REDIS_AUTH_TOKEN }}
-          DYNAMO_TABLE: ${{ inputs.DYNAMO_TABLE || vars.DYNAMO_TABLE }}
-          USER_FILES_BUCKET: ${{ inputs.USER_FILES_BUCKET || vars.USER_FILES_BUCKET }}
-        with:
-          host: ${{ env.EC2_PUBLIC_IP }}
-          username: admin
-          key: ${{ secrets.SSH_KEY }}
-          envs: IMAGE_TAG,REDIS_HOST,REDIS_AUTH_TOKEN,DYNAMO_TABLE,USER_FILES_BUCKET
-          script: |
-            sudo -E bash /tmp/redeploy.sh
+          EXPECTED: ${{ steps.deploy.outputs.task-definition-arn }}
+        run: |
+          read -r running state <<< "$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" \
+            --query "services[0].deployments[?status=='PRIMARY'] | [0].[taskDefinition, rolloutState]" --output text)"
+          if [ "$running" != "$EXPECTED" ] || [ "$state" != "COMPLETED" ]; then
+            echo "::error::Deploy did not complete, the service runs $running ($state) instead of $EXPECTED"
+            exit 1
+          fi
+          echo "::notice::Running $EXPECTED"

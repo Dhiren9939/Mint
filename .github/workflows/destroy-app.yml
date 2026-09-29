@@ -55,6 +55,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          for name in EC2_PUBLIC_IP REDIS_HOST DYNAMO_TABLE USER_FILES_BUCKET FRONTEND_BUCKET CLOUDFRONT_ID; do
+          for name in ECS_CLUSTER ECS_SERVICE TASK_FAMILY FRONTEND_BUCKET CLOUDFRONT_ID; do
             gh variable delete "$name" --env "$ENVIRONMENT" || true
           done

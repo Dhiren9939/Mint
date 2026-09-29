@@ -42,13 +42,13 @@ jobs:
   backend-cd:
     needs: [config, infra-cd]
     permissions:
+      id-token: write
       contents: read
       packages: write
     uses: ./.github/workflows/backend-cd.yml
     with:
       environment: ${{ needs.config.outputs.environment }}
-      EC2_PUBLIC_IP: ${{ needs.infra-cd.outputs.EC2_PUBLIC_IP }}
-      REDIS_HOST: ${{ needs.infra-cd.outputs.REDIS_HOST }}
-      DYNAMO_TABLE: ${{ needs.infra-cd.outputs.DYNAMO_TABLE }}
-      USER_FILES_BUCKET: ${{ needs.infra-cd.outputs.USER_FILES_BUCKET }}
+      ECS_CLUSTER: ${{ needs.infra-cd.outputs.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ needs.infra-cd.outputs.ECS_SERVICE }}
+      TASK_FAMILY: ${{ needs.infra-cd.outputs.TASK_FAMILY }}
     secrets: inherit
