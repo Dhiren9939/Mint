@@ -9,6 +9,7 @@ resource "aws_instance" "server" {
   ami                         = "ami-0ad737a8b58b3fb92"
   associate_public_ip_address = true
   iam_instance_profile        = var.iam_role_instance_profile_name
+  monitoring                  = true
 
   metadata_options {
     http_tokens                 = "required"
@@ -16,7 +17,7 @@ resource "aws_instance" "server" {
   }
 
   credit_specification {
-    cpu_credits = "standard"
+    cpu_credits = "unlimited"
   }
 
   root_block_device {

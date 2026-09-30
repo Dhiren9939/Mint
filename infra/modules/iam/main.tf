@@ -25,6 +25,11 @@ resource "aws_iam_role_policy_attachment" "attach_mint_api_policy" {
   policy_arn = aws_iam_policy.mint_api_role_policy.arn
 }
 
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  role       = aws_iam_role.mint_api_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
 resource "aws_iam_policy" "mint_api_role_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
