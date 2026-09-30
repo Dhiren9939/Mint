@@ -1,9 +1,6 @@
 package me.dhiren9939.mint.filter;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.BucketConfiguration;
-import io.github.bucket4j.distributed.proxy.ProxyManager;
+import io.lettuce.core.api.StatefulRedisConnection;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -13,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.common.ApiError;
 import me.dhiren9939.mint.common.ApiResponse;
+import me.dhiren9939.mint.common.RedisRateLimiter;
+import me.dhiren9939.mint.common.RedisRateLimiter.Limit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
@@ -49,7 +48,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Value("${spring.profiles.active:dev}")
     private String profile;
 
-    private final ProxyManager<String> proxyManager;
+    private final StatefulRedisConnection<String, byte[]> connection;
+    private final RedisRateLimiter rateLimiter;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -67,30 +67,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String ipKey = keyBuilder("IP", method, ip);
         String userKey = keyBuilder("USER", method, userId);
 
-        Bucket globalBucket = isGet ? getBucket(globalKey, globalGetCapacity, Duration.ofDays(30)) :
-                getBucket(globalKey, globalPostCapacity, Duration.ofDays(30));
+        Limit global = new Limit(globalKey, isGet ? globalGetCapacity : globalPostCapacity, Duration.ofDays(30));
+        Limit ipLimit = new Limit(ipKey, isGet ? ipGetCapacity : ipPostCapacity, Duration.ofMinutes(1));
+        Limit user = new Limit(userKey, isGet ? userGetCapacity : userPostCapacity, Duration.ofDays(1));
 
-        Bucket ipBucket = isGet ? getBucket(ipKey, ipGetCapacity, Duration.ofMinutes(1)) :
-                getBucket(ipKey, ipPostCapacity, Duration.ofMinutes(1));
-
-        Bucket userBucket = isGet ? getBucket(userKey, userGetCapacity, Duration.ofDays(1)) :
-                getBucket(userKey, userPostCapacity, Duration.ofDays(1));
-
-        if (!globalBucket.tryConsume(1)) {
-            rejectRequest(response, "Global");
-            return;
-        }
-
-        if (!ipBucket.tryConsume(1)) {
-            globalBucket.addTokens(1);
-            rejectRequest(response, "IP");
-            return;
-        }
-
-        if (!userBucket.tryConsume(1)) {
-            globalBucket.addTokens(1);
-            ipBucket.addTokens(1);
-            rejectRequest(response, "User");
+        String rejectedBy = rateLimiter.check(connection, global, ipLimit, user);
+        if (rejectedBy != null) {
+            rejectRequest(response, rejectedBy);
             return;
         }
 
@@ -99,19 +82,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private String keyBuilder(String type, String method, String id) {
         return type + "_" + method + ":" + id;
-    }
-
-    private Bucket getBucket(String key, int capacity, Duration duration) {
-        BucketConfiguration configuration = BucketConfiguration
-                .builder()
-                .addLimit(Bandwidth
-                        .builder()
-                        .capacity(capacity)
-                        .refillGreedy(capacity, duration)
-                        .build())
-                .build();
-
-        return proxyManager.builder().build(key, () -> configuration);
     }
 
     private void rejectRequest(HttpServletResponse response, String limitedBy) throws IOException {

@@ -1,6 +1,7 @@
 package me.dhiren9939.mint.config;
 
-import io.github.bucket4j.distributed.proxy.ProxyManager;
+import io.lettuce.core.api.StatefulRedisConnection;
+import me.dhiren9939.mint.common.RedisRateLimiter;
 import me.dhiren9939.mint.filter.RateLimitFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -39,9 +40,9 @@ public class SecurityConfig {
    }
 
     @Bean
-    public RateLimitFilter rateLimitFilter(ProxyManager<String> proxyManager,
+    public RateLimitFilter rateLimitFilter(StatefulRedisConnection<String, byte[]> connection,
                                            ObjectMapper objectMapper) {
-        return new RateLimitFilter(proxyManager, objectMapper);
+        return new RateLimitFilter(connection, new RedisRateLimiter(), objectMapper);
     }
 
     @Bean
