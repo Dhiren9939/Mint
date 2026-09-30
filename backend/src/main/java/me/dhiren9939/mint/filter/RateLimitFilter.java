@@ -1,9 +1,6 @@
 package me.dhiren9939.mint.filter;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.BucketConfiguration;
-import io.github.bucket4j.distributed.proxy.ProxyManager;
+import io.lettuce.core.api.StatefulRedisConnection;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -17,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.common.ApiError;
 import me.dhiren9939.mint.common.ApiResponse;
 import me.dhiren9939.mint.common.RedisConnectionProvider;
+import me.dhiren9939.mint.common.RedisRateLimiter;
+import me.dhiren9939.mint.common.RedisRateLimiter.Limit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
@@ -56,6 +55,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final RedisConnectionProvider redisConnectionProvider;
     private final ObjectMapper objectMapper;
     private final MeterRegistry meterRegistry;
+    private final RedisRateLimiter rateLimiter;
 
     @Override
     public void doFilterInternal(HttpServletRequest request,
@@ -74,8 +74,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                HttpServletResponse response,
                                FilterChain filterChain) throws ServletException, IOException {
 
-        Optional<ProxyManager<String>> proxyManager = redisConnectionProvider.getProxyManager();
-        if (proxyManager.isEmpty()) {
+        Optional<StatefulRedisConnection<String, byte[]>> connection = redisConnectionProvider.getConnection();
+        if (connection.isEmpty()) {
             // Fail open, no rate limiting at all while the cache is unavailable
             recordDecision("fail_open", "none");
             filterChain.doFilter(request, response);
@@ -84,7 +84,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String rejectedBy;
         try {
-            rejectedBy = consumeLimits(proxyManager.get(), request, response);
+            rejectedBy = consumeLimits(connection.get(), request, response);
         } catch (RuntimeException e) {
             // Fail open, a cache outage must not take the API down
             log.warn("Rate limiter unavailable, allowing request: {}", e.toString());
@@ -114,7 +114,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /**
      * @return the name of the limit that rejected the request, or null if it is allowed
      */
-    private String consumeLimits(ProxyManager<String> proxyManager,
+    private String consumeLimits(StatefulRedisConnection<String, byte[]> connection,
                                  HttpServletRequest request,
                                  HttpServletResponse response) {
         String method = request.getMethod().toUpperCase();
@@ -123,52 +123,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String ip = request.getRemoteAddr();
         String userId = getOrSetCookie(request, response);
 
-        String globalKey = keyBuilder("GLOBAL", method, "");
-        String ipKey = keyBuilder("IP", method, ip);
-        String userKey = keyBuilder("USER", method, userId);
+        Limit global = new Limit(keyBuilder("GLOBAL", method, ""),
+                isGet ? globalGetCapacity : globalPostCapacity, Duration.ofDays(30));
+        Limit ipLimit = new Limit(keyBuilder("IP", method, ip),
+                isGet ? ipGetCapacity : ipPostCapacity, Duration.ofMinutes(1));
+        Limit user = new Limit(keyBuilder("USER", method, userId),
+                isGet ? userGetCapacity : userPostCapacity, Duration.ofDays(1));
 
-        Bucket globalBucket = isGet ? getBucket(proxyManager, globalKey, globalGetCapacity, Duration.ofDays(30)) :
-                getBucket(proxyManager, globalKey, globalPostCapacity, Duration.ofDays(30));
-
-        Bucket ipBucket = isGet ? getBucket(proxyManager, ipKey, ipGetCapacity, Duration.ofMinutes(1)) :
-                getBucket(proxyManager, ipKey, ipPostCapacity, Duration.ofMinutes(1));
-
-        Bucket userBucket = isGet ? getBucket(proxyManager, userKey, userGetCapacity, Duration.ofDays(1)) :
-                getBucket(proxyManager, userKey, userPostCapacity, Duration.ofDays(1));
-
-        if (!globalBucket.tryConsume(1)) {
-            return "Global";
-        }
-
-        if (!ipBucket.tryConsume(1)) {
-            globalBucket.addTokens(1);
-            return "IP";
-        }
-
-        if (!userBucket.tryConsume(1)) {
-            globalBucket.addTokens(1);
-            ipBucket.addTokens(1);
-            return "User";
-        }
-
-        return null;
+        return rateLimiter.check(connection, global, ipLimit, user);
     }
 
     private String keyBuilder(String type, String method, String id) {
         return type + "_" + method + ":" + id;
-    }
-
-    private Bucket getBucket(ProxyManager<String> proxyManager, String key, int capacity, Duration duration) {
-        BucketConfiguration configuration = BucketConfiguration
-                .builder()
-                .addLimit(Bandwidth
-                        .builder()
-                        .capacity(capacity)
-                        .refillGreedy(capacity, duration)
-                        .build())
-                .build();
-
-        return proxyManager.builder().build(key, () -> configuration);
     }
 
     private void rejectRequest(HttpServletResponse response, String limitedBy) throws IOException {
