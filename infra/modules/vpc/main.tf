@@ -74,19 +74,6 @@ resource "aws_security_group" "ec2_sg" {
   vpc_id = aws_vpc.main_vpc.id
 }
 
-data "aws_ec2_managed_prefix_list" "cloudfront" {
-  name = "com.amazonaws.global.cloudfront.origin-facing"
-}
-
-resource "aws_security_group_rule" "cloudfront_to_ec2" {
-  type              = "ingress"
-  security_group_id = aws_security_group.ec2_sg.id
-  protocol          = "tcp"
-  from_port         = 80
-  to_port           = 80
-  prefix_list_ids   = [data.aws_ec2_managed_prefix_list.cloudfront.id]
-}
-
 resource "aws_security_group_rule" "allow_ssh" {
   type              = "ingress"
   security_group_id = aws_security_group.ec2_sg.id
