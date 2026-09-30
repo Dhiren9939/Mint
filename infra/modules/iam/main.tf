@@ -1,5 +1,5 @@
 resource "aws_iam_role" "mint_api_role" {
-  name = "mint-api-role"
+  name = "mint-bench-sql-api-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -16,7 +16,7 @@ resource "aws_iam_role" "mint_api_role" {
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "ec2-instance-profile"
+  name = "mint-bench-sql-ec2-instance-profile"
   role = aws_iam_role.mint_api_role.name
 }
 

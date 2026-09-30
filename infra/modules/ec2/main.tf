@@ -1,5 +1,5 @@
 resource "aws_key_pair" "mint_key" {
-  key_name   = "MintKey"
+  key_name   = "mint-bench-sql-key"
   public_key = var.ssh_public_key
 }
 
