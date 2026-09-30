@@ -1,17 +1,19 @@
 locals {
   # EC2 arms pass log_group_name directly; ECS arms carry it on the ecs object.
   log_group_name = var.ecs != null ? var.ecs.log_group_name : var.log_group_name
+  # From nullness, which is always known at plan time, even when the name itself isn't yet
+  has_log_group = var.ecs != null || var.log_group_name != null
 
   # ---------------------------------------------------------------------
   # Section 1 — Outcome / RED
   #
-  # Branches below are wrapped in jsondecode(jsonencode(...)): the widget
-  # objects in each branch have structurally different "metrics" shapes, and
-  # HCL's conditional operator requires both branches of a ternary to unify
-  # to an identical type. Round-tripping through JSON erases the static type
-  # (giving a dynamic value), which unifies with anything and sidesteps that
-  # restriction. This trick is reused everywhere below a ternary picks
-  # between differently-shaped widget lists.
+  # Every ternary below that picks between widget lists has string branches,
+  # jsondecode(cond ? jsonencode([...]) : "[]"), never list branches. HCL
+  # requires both branches of a ternary to have the same type, and two widget
+  # lists almost never do (different lengths, different attributes). Wrapping
+  # each branch in jsondecode(jsonencode(...)) instead only looks like it works:
+  # it passes `terraform validate`, where ids are unknown, then fails at apply,
+  # where they are known and the tuples get concrete, mismatched types.
   # ---------------------------------------------------------------------
   sec_outcome = concat(
     [
@@ -29,7 +31,7 @@ locals {
         }
       }
     ],
-    var.alb != null ? jsondecode(jsonencode([
+    jsondecode(var.alb != null ? jsonencode([
       {
         type = "metric"
         properties = {
@@ -45,7 +47,7 @@ locals {
           ]
         }
       }
-      ])) : jsondecode(jsonencode([
+      ]) : jsonencode([
       {
         type = "metric"
         properties = {
@@ -61,7 +63,7 @@ locals {
         }
       }
     ])),
-    var.alb != null ? jsondecode(jsonencode([
+    jsondecode(var.alb != null ? jsonencode([
       {
         type = "metric"
         properties = {
@@ -76,7 +78,7 @@ locals {
           ]
         }
       }
-      ])) : jsondecode(jsonencode([
+      ]) : jsonencode([
       {
         # EC2 arms get their percentiles from app metrics; Micrometer percentiles are
         # per-instance only, so this is a placeholder, not a true cross-instance percentile.
@@ -198,7 +200,7 @@ locals {
   # ---------------------------------------------------------------------
   # Section 3 — Compute (ECS + NAT, or EC2)
   # ---------------------------------------------------------------------
-  sec_compute_ecs = var.ecs == null ? [] : jsondecode(jsonencode(concat(
+  sec_compute_ecs = jsondecode(var.ecs == null ? "[]" : jsonencode(concat(
     [
       {
         type = "metric"
@@ -226,7 +228,7 @@ locals {
         }
       }
     ],
-    var.alb == null ? [] : jsondecode(jsonencode([
+    jsondecode(var.alb == null ? "[]" : jsonencode([
       {
         type = "metric"
         properties = {
@@ -257,7 +259,7 @@ locals {
     ]))
   )))
 
-  sec_compute_nat = var.nat == null ? [] : jsondecode(jsonencode([
+  sec_compute_nat = jsondecode(var.nat == null ? "[]" : jsonencode([
     {
       type = "metric"
       properties = {
@@ -273,7 +275,7 @@ locals {
     }
   ]))
 
-  sec_compute_ec2 = var.ec2 == null ? [] : jsondecode(jsonencode(concat(
+  sec_compute_ec2 = jsondecode(var.ec2 == null ? "[]" : jsonencode(concat(
     [
       {
         type = "metric"
@@ -328,7 +330,7 @@ locals {
         }
       }
     ],
-    !var.ec2.has_redis_sidecar ? [] : jsondecode(jsonencode([
+    jsondecode(!var.ec2.has_redis_sidecar ? "[]" : jsonencode([
       {
         type = "metric"
         properties = {
@@ -405,7 +407,7 @@ locals {
         }
       }
     ],
-    var.rds == null ? [] : jsondecode(jsonencode([
+    jsondecode(var.rds == null ? "[]" : jsonencode([
       {
         type = "metric"
         properties = {
@@ -426,7 +428,7 @@ locals {
   # ---------------------------------------------------------------------
   # Section 5 — Datastores (AWS view)
   # ---------------------------------------------------------------------
-  sec_dynamo = var.dynamo == null ? [] : jsondecode(jsonencode([
+  sec_dynamo = jsondecode(var.dynamo == null ? "[]" : jsonencode([
     {
       type = "metric"
       properties = {
@@ -470,7 +472,7 @@ locals {
     }
   ]))
 
-  sec_valkey = var.valkey == null ? [] : jsondecode(jsonencode([
+  sec_valkey = jsondecode(var.valkey == null ? "[]" : jsonencode([
     {
       type = "metric"
       properties = {
@@ -526,7 +528,7 @@ locals {
     }
   ]))
 
-  sec_rds = var.rds == null ? [] : jsondecode(jsonencode([
+  sec_rds = jsondecode(var.rds == null ? "[]" : jsonencode([
     {
       type = "metric"
       properties = {
@@ -601,7 +603,7 @@ locals {
   # Published post-run (not live) by bench/loadgen/run-scenario.sh, namespace "K6", one
   # data point per bench-run.yml invocation, dimension Arm=<loadgen.arm_name>. If arm_name
   # isn't set these widgets render with no matching data rather than erroring.
-  sec_loadgen = var.loadgen == null || !var.loadgen.enabled ? [] : jsondecode(jsonencode(concat(
+  sec_loadgen = jsondecode(var.loadgen == null || !var.loadgen.enabled ? "[]" : jsonencode(concat(
     [
       {
         type = "metric"
@@ -633,7 +635,7 @@ locals {
         }
       }
     ],
-    var.loadgen.instance_id == null ? [] : jsondecode(jsonencode([
+    jsondecode(var.loadgen.instance_id == null ? "[]" : jsonencode([
       {
         type = "metric"
         properties = {
@@ -685,7 +687,7 @@ locals {
 
   logs_y = length(local.metrics_widgets) == 0 ? 0 : local.section_y_offsets[length(local.sections) - 1] + local.section_row_counts[length(local.sections) - 1] * 6
 
-  log_widgets = local.log_group_name == null ? [] : jsondecode(jsonencode([
+  log_widgets = jsondecode(!local.has_log_group ? "[]" : jsonencode([
     {
       type   = "log"
       x      = 0

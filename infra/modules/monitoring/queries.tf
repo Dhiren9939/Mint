@@ -1,6 +1,10 @@
-resource "aws_cloudwatch_query_definition" "errors_by_logger" {
-  name = "${var.name}/errors-by-logger"
+# Saved Logs Insights queries, only when the environment has a log group to point them at
+# (a null entry in log_group_names is rejected at plan time)
 
+resource "aws_cloudwatch_query_definition" "errors_by_logger" {
+  count = local.has_log_group ? 1 : 0
+
+  name            = "${var.name}/errors-by-logger"
   log_group_names = [local.log_group_name]
 
   query_string = <<-QUERY
@@ -12,8 +16,9 @@ resource "aws_cloudwatch_query_definition" "errors_by_logger" {
 }
 
 resource "aws_cloudwatch_query_definition" "fail_open_warnings_over_time" {
-  name = "${var.name}/fail-open-warnings-over-time"
+  count = local.has_log_group ? 1 : 0
 
+  name            = "${var.name}/fail-open-warnings-over-time"
   log_group_names = [local.log_group_name]
 
   query_string = <<-QUERY
@@ -25,8 +30,9 @@ resource "aws_cloudwatch_query_definition" "fail_open_warnings_over_time" {
 }
 
 resource "aws_cloudwatch_query_definition" "slowest_requests" {
-  name = "${var.name}/slowest-requests"
+  count = local.has_log_group ? 1 : 0
 
+  name            = "${var.name}/slowest-requests"
   log_group_names = [local.log_group_name]
 
   query_string = <<-QUERY
