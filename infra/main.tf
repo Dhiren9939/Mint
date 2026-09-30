@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     bucket       = "dhiren9939-state-bucket"
-    key          = "projects/mint-infra.tfstate"
+    key          = "projects/mint-bench-sql-infra.tfstate"
     region       = "ap-south-1"
     use_lockfile = true
   }
