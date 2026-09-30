@@ -17,3 +17,20 @@ variable "ssh_public_key" {
   type        = string
   description = "The public key for Mint Key Pair"
 }
+
+variable "db_host" {
+  type        = string
+  description = "The RDS address, no port"
+}
+
+variable "db_username" {
+  type        = string
+  description = "The RDS username"
+  sensitive   = true
+}
+
+variable "db_password" {
+  type        = string
+  description = "The RDS password"
+  sensitive   = true
+}

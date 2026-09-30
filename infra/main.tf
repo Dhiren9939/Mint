@@ -30,6 +30,9 @@ module "ec2" {
   public_subnet_id               = module.vpc.public_subnet_id
   iam_role_instance_profile_name = module.iam.iam_instance_profile_name
   ssh_public_key                 = var.ssh_public_key
+  db_host                        = module.rds.db_address
+  db_username                    = var.db_username
+  db_password                    = var.db_password
 }
 
 module "vpc" {

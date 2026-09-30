@@ -11,6 +11,13 @@ resource "aws_instance" "server" {
   iam_instance_profile        = var.iam_role_instance_profile_name
   monitoring                  = true
 
+  user_data = templatefile("${path.module}/user_data.sh.tftpl", {
+    db_host     = var.db_host
+    db_username = var.db_username
+    db_password = var.db_password
+  })
+  user_data_replace_on_change = true
+
   metadata_options {
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
