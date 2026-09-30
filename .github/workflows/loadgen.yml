@@ -1,0 +1,75 @@
+name: loadgen
+
+# Brings the shared load-generator EC2 up or down. One instance, created once and reused
+# across every bench arm -- not tied to any arm's own branch/environment.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "up (terraform apply) or down (terraform destroy)"
+        required: true
+        type: choice
+        options:
+          - up
+          - down
+
+concurrency:
+  group: loadgen-lifecycle
+  cancel-in-progress: false
+
+jobs:
+  apply-or-destroy:
+    if: github.ref_name == 'main'
+    environment: loadgen
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: ./bench/loadgen
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout Files
+
+      - name: Setup AWS and Terraform
+        uses: ./.github/actions/setup-aws-terraform
+        with:
+          aws-region: ap-south-1
+          role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
+          working-directory: "./bench/loadgen"
+          # Reuses the composite action's own key-building logic
+          # (projects/mint/$ENVIRONMENT.tfstate) to land on the fixed
+          # projects/mint/loadgen.tfstate this standalone root uses.
+          environment: loadgen
+
+      - name: Terraform Apply
+        if: inputs.action == 'up'
+        run: terraform apply -no-color -input=false -auto-approve
+
+      - name: Terraform Destroy
+        if: inputs.action == 'down'
+        run: terraform destroy -no-color -input=false -auto-approve
+
+      # bench-run.yml needs the instance id + results bucket without re-running
+      # Terraform, so they're published as environment variables (same pattern as
+      # infra-cd.yml's ECS_CLUSTER/etc.)
+      - name: Update Environment Variables
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        run: |
+          if [ "${{ inputs.action }}" = "up" ]; then
+            INSTANCE_ID="$(terraform output -raw instance_id)"
+            RESULTS_BUCKET="$(terraform output -raw results_bucket_name)"
+            PUBLIC_IP="$(terraform output -raw public_ip)"
+            gh variable set LOADGEN_INSTANCE_ID --env loadgen --body "$INSTANCE_ID"
+            gh variable set LOADGEN_RESULTS_BUCKET --env loadgen --body "$RESULTS_BUCKET"
+            gh variable set LOADGEN_PUBLIC_IP --env loadgen --body "$PUBLIC_IP"
+            echo "::notice::Load-gen EIP is $PUBLIC_IP -- add it to the target arm's api_ingress_cidrs"
+          else
+            for name in LOADGEN_INSTANCE_ID LOADGEN_RESULTS_BUCKET LOADGEN_PUBLIC_IP; do
+              gh variable delete "$name" --env loadgen || true
+            done
+          fi
