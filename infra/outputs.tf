@@ -25,3 +25,11 @@ output "server_instance_id" {
 output "db_endpoint" {
   value = module.rds.db_endpoint
 }
+
+output "ec2_private_ip" {
+  value = module.ec2.server_private_ip
+}
+
+output "api_domain" {
+  value = "mint-bench-sql.${var.domain_name}"
+}

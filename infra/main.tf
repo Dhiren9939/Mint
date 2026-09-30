@@ -44,3 +44,10 @@ module "rds" {
   rds_sg_id            = module.vpc.rds_sg_id
   db_name              = var.db_name
 }
+
+module "route53" {
+  source         = "./modules/route53"
+  domain_name    = var.domain_name
+  zone_id        = var.zone_id
+  ec2_private_ip = module.ec2.server_private_ip
+}

@@ -13,3 +13,7 @@ output "server_public_ip" {
 output "server_public_dns" {
   value = aws_instance.server.public_dns
 }
+
+output "server_private_ip" {
+  value = aws_instance.server.private_ip
+}
