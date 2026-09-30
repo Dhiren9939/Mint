@@ -8,7 +8,7 @@ variable "zone_id" {
   type        = string
 }
 
-variable "ec2_private_ip" {
-  description = "The private IP of the backend EC2"
+variable "ec2_public_ip" {
+  description = "The public IP of the backend EC2"
   type        = string
 }

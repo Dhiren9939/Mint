@@ -74,13 +74,13 @@ resource "aws_security_group" "ec2_sg" {
   vpc_id = aws_vpc.main_vpc.id
 }
 
-resource "aws_security_group_rule" "vpc_to_ec2_http" {
+resource "aws_security_group_rule" "public_to_ec2_http" {
   type              = "ingress"
   security_group_id = aws_security_group.ec2_sg.id
   protocol          = "tcp"
   from_port         = 80
   to_port           = 80
-  cidr_blocks       = [aws_vpc.main_vpc.cidr_block]
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
 resource "aws_security_group_rule" "allow_ssh" {

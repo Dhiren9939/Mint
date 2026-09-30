@@ -3,5 +3,5 @@ resource "aws_route53_record" "mint_a" {
   name    = "mint-bench-sql.${var.domain_name}"
   type    = "A"
   ttl     = 60
-  records = [var.ec2_private_ip]
+  records = [var.ec2_public_ip]
 }
