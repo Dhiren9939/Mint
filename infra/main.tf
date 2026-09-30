@@ -105,3 +105,33 @@ module "elasticache" {
   availability_zones = module.vpc.private_subnet_azs
   auth_token         = var.REDIS_AUTH_TOKEN
 }
+
+module "monitoring" {
+  source = "./modules/monitoring"
+  name   = "${local.name}-dashboard"
+  region = var.region
+
+  ecs = {
+    cluster_name   = module.ecs.cluster_name
+    service_name   = module.ecs.service_name
+    log_group_name = module.ecs.log_group_name
+  }
+
+  alb = {
+    arn_suffix              = module.ecs.alb_arn_suffix
+    target_group_arn_suffix = module.ecs.target_group_arn_suffix
+  }
+
+  dynamo = {
+    table_name = module.dynamodb.table_name
+  }
+
+  valkey = {
+    replication_group_id = module.elasticache.replication_group_id
+    member_cluster_ids   = module.elasticache.member_cluster_ids
+  }
+
+  nat = {
+    nat_gateway_ids = module.vpc.nat_gateway_ids
+  }
+}

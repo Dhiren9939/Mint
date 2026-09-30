@@ -80,3 +80,15 @@ variable "dynamo_table" {
 variable "user_files_bucket" {
   type = string
 }
+
+variable "container_insights_enabled" {
+  type        = bool
+  description = "Enable ECS Container Insights on the cluster (CPU/memory/task-count metrics for the monitoring dashboard)"
+  default     = true
+}
+
+variable "extra_environment" {
+  type        = map(string)
+  description = "Extra environment variables merged into the api container's static list, e.g. raised MINT_CAP_* for bench arms"
+  default     = {}
+}

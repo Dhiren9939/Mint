@@ -84,3 +84,38 @@ Each app subnet routes `0.0.0.0/0` to the NAT gateway in its own AZ, so one AZ f
 - Nothing accepts SSH; there is no instance to log into. Logs are in CloudWatch.
 - While an environment is up it pays for two NAT gateways and their Elastic IPs, the ALB and 2 to 4 tasks. `destroy-app` removes all of it.
 - CloudFront creates `CloudFront-VPCOrigins-Service-SG` and network interfaces in the app subnets for the VPC origin. They are not in Terraform state and AWS removes them some time after the VPC origin is deleted, so a teardown can fail on the subnets or VPC and need a rerun.
+
+## Monitoring
+
+`infra/modules/monitoring` builds one `aws_cloudwatch_dashboard` per environment, named `${name}-dashboard`. It's driven entirely by optional input objects (`alb`, `ecs`, `ec2`, `rds`, `dynamo`, `valkey`, `nat`, `loadgen`); each section only appears when its backing object is passed in, so the same module serves prod (ECS/ALB/Dynamo/Valkey/NAT) and the EC2 bench arms (EC2/RDS instead) unchanged. Widgets stack in a 3-column, width-8, height-6 grid, section by section, so any subset of sections renders without overlap.
+
+Dashboard sections, top to bottom:
+
+1. **Outcome (RED).** Request rate by uri + status, 4xx/429/5xx rate, latency p50/p95/p99 (from the ALB's `TargetResponseTime` on ECS, or a per-instance Micrometer placeholder on EC2 arms — server-side percentiles are per instance, so true cross-instance percentiles come from k6, not this row), and cache hit/miss/error (`Mint` namespace, `mint.cache.get` by the `result` dimension).
+2. **App saturation.** Tomcat threads busy vs max, connections, heap used vs max, GC pause, process CPU and live threads — all from the custom `Mint` Micrometer namespace, so this row looks the same in every arm.
+3. **Compute.** ECS: Container Insights CPU/memory/running-task-count, ALB healthy hosts, ELB 5xx/rejected/target-connection-error counts, plus NAT `ErrorPortAllocation` per gateway. EC2 (bench arms): CPU, `CPUCreditBalance`, `CPUSurplusCreditsCharged`, CWAgent `mem_used_percent`/`tcp_established`/`tcp_time_wait`, and procstat CPU/memory for the `java` process (and `redis-server` too, on the sql arm's Redis sidecar).
+4. **Dependency timers (app view).** `mint.ratelimit.duration`, `mint.cache.get`/`mint.cache.put`, `mint.db.duration` by the `op` dimension, `mint.redis.connected`, plus Hikari `pending`/`active`/`acquire` when an `rds` object is present.
+5. **Datastores (AWS view).** DynamoDB `SuccessfulRequestLatency` (Get/Put), consumed RCU/WCU, throttles and system errors when `dynamo` is present. Valkey `EngineCPUUtilization`, `EvalBasedCmdsLatency`, Get/Set command latency, connections, memory % and hits/misses when `valkey` is present. RDS CPU/credits, connections, read/write latency and IOPS, disk queue depth and freeable memory when `rds` is present.
+6. **Load generator.** k6 arrival rate, dropped iterations, p95/p99 and error rate, plus the load-gen instance's CPU/network, when `loadgen.enabled` is set. The k6 metric names (`K6` namespace) are provisional — Stage 3 defines the actual k6 → CloudWatch pipeline, and these widgets will need updating once that's wired up.
+7. **Logs.** Two Logs Insights table widgets against the environment's log group (`ecs.log_group_name`, or `log_group_name` directly on EC2 arms): one filtering `@message like /ERROR/`, one filtering `@message like /Rate limiter unavailable|Cache read failed/`.
+
+`infra/modules/monitoring/queries.tf` also saves three reusable Logs Insights query definitions against the same log group: errors grouped by logger, fail-open warnings over time, and the slowest requests by `duration_ms`.
+
+Supporting wiring: the `ecs` module now enables Container Insights on the cluster (`container_insights_enabled`, default `true`) and exposes `alb_arn_suffix`, `target_group_arn_suffix` and `log_group_name`; its task definition sets `MINT_ENV` and merges an `extra_environment` map into the container's environment list. The `vpc` module exposes `nat_gateway_ids`; `elasticache` exposes `replication_group_id` and `member_cluster_ids`. The task role's IAM policy grants `cloudwatch:PutMetricData`, restricted by a `cloudwatch:namespace = "Mint"` condition, so the app can publish its custom metrics but nothing else.
+
+Alarms are out of scope — this is dashboards only. Dashboards and log groups live and die with their environment; results are captured (widget PNGs, k6 summaries) before `destroy-app` runs.
+
+### Symptom → bottleneck
+
+| Signal | What failed |
+| --- | --- |
+| k6 dropped iterations > 0, load-gen CPU high | the load generator, so the run is invalid |
+| Tomcat threads busy = 50, CPU low, latency up | blocked on a dependency; check row 4 for which timer grew |
+| CPU ≈ 100% (instance or task) | compute |
+| `CPUCreditBalance` 0 / surplus charged rising | burstable CPU (EC2 or RDS) |
+| heap ≈ max, GC pause up | JVM memory |
+| Hikari pending > 0 | DB connection pool; then check RDS CPU / credits / latency / DiskQueueDepth |
+| DynamoDB throttles / latency up | DynamoDB |
+| `mint.ratelimit.duration` up, Valkey EngineCPU / EVAL latency up | Redis (the global-bucket hot key) |
+| ALB `RejectedConnectionCount` / ELB 5xx, running tasks = 4 | ALB / the scaling cap |
+| NAT `ErrorPortAllocation` | NAT |

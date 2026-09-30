@@ -29,3 +29,7 @@ output "cache_sg_id" {
 output "private_subnet_azs" {
   value = [for subnet in aws_subnet.cache : subnet.availability_zone]
 }
+
+output "nat_gateway_ids" {
+  value = { for k, n in aws_nat_gateway.nat : k => n.id }
+}

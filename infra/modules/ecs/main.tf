@@ -6,6 +6,11 @@ locals {
 
 resource "aws_ecs_cluster" "cluster" {
   name = var.name
+
+  setting {
+    name  = "containerInsights"
+    value = var.container_insights_enabled ? "enabled" : "disabled"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "api" {
@@ -48,13 +53,17 @@ resource "aws_ecs_task_definition" "api" {
         { containerPort = 8081, protocol = "tcp" }
       ]
 
-      environment = [
-        { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
-        { name = "REDIS_HOST", value = var.redis_host },
-        { name = "DYNAMO_TABLE", value = var.dynamo_table },
-        { name = "USER_FILES_BUCKET", value = var.user_files_bucket },
-        { name = "JAVA_TOOL_OPTIONS", value = "-XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=40 -XX:+UseG1GC" }
-      ]
+      environment = concat(
+        [
+          { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
+          { name = "REDIS_HOST", value = var.redis_host },
+          { name = "DYNAMO_TABLE", value = var.dynamo_table },
+          { name = "USER_FILES_BUCKET", value = var.user_files_bucket },
+          { name = "MINT_ENV", value = var.name },
+          { name = "JAVA_TOOL_OPTIONS", value = "-XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=40 -XX:+UseG1GC" }
+        ],
+        [for k, v in var.extra_environment : { name = k, value = v }]
+      )
 
       secrets = [
         { name = "REDIS_AUTH_TOKEN", valueFrom = aws_ssm_parameter.redis_auth_token.arn }

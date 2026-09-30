@@ -58,6 +58,16 @@ resource "aws_iam_policy" "mint_api_role_policy" {
             "dynamodb:PutItem"
           ],
           Resource = var.file_meta_data_table_arn
+        },
+        {
+          Effect   = "Allow",
+          Action   = "cloudwatch:PutMetricData",
+          Resource = "*",
+          Condition = {
+            StringEquals = {
+              "cloudwatch:namespace" = "Mint"
+            }
+          }
         }
       ]
     )
