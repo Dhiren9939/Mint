@@ -5,9 +5,9 @@ variable "region" {
 }
 
 variable "instance_type" {
-  description = "Load generator size. Compute-optimised, no CPU credits, 8 vCPU / 16 GiB by default"
+  description = "Load generator size. Compute-optimised, no CPU credits, 4 vCPU / 8 GiB by default"
   type        = string
-  default     = "c6i.2xlarge"
+  default     = "c6i.xlarge"
 }
 
 variable "ssh_cidr" {
