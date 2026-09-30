@@ -11,7 +11,7 @@ A modern anonymous file and text sharing platform built with React, Spring Boot,
 - **Anonymous sharing** without registration or user accounts.
 - **Secure storage** using AWS S3 signed URLs.
 - **Auto-expiring files** and link cleanup.
-- **Rate limiting** on public endpoints via Bucket4j.
+- **Rate limiting** on public endpoints with a Lua script in Redis.
 - **Modern frontend** built with React + Vite.
 
 ## Tech Stack

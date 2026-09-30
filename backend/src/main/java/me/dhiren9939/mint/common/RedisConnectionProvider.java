@@ -1,8 +1,5 @@
 package me.dhiren9939.mint.common;
 
-import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
-import io.github.bucket4j.distributed.proxy.ProxyManager;
-import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -12,7 +9,6 @@ import io.lettuce.core.codec.StringCodec;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -24,8 +20,8 @@ import java.util.concurrent.TimeUnit;
  * Connects to Redis in the background so an unreachable cache never blocks startup.
  * Failed attempts are retried with exponential backoff (2s, 4s, 8s, ... capped) plus jitter.
  * The single connection here is shared by every Redis consumer in the app (rate limiting,
- * caching, ...); {@link #getConnection()} and {@link #getProxyManager()} are empty whenever
- * there is no open connection, and callers fail open instead of blocking on Redis.
+ * caching, ...); {@link #getConnection()} is empty whenever there is no open connection,
+ * and callers fail open instead of blocking on Redis.
  * Once connected, Lettuce's auto reconnect handles later drops such as a failover.
  */
 @Slf4j
@@ -42,7 +38,6 @@ public class RedisConnectionProvider implements AutoCloseable {
         return thread;
     });
 
-    private volatile ProxyManager<String> proxyManager;
     private volatile StatefulRedisConnection<String, byte[]> connection;
     private volatile boolean closed;
     private int attempt;
@@ -70,13 +65,6 @@ public class RedisConnectionProvider implements AutoCloseable {
         return uri.getHost();
     }
 
-    /**
-     * The Bucket4j proxy manager built on top of the shared connection, for rate limiting.
-     */
-    public Optional<ProxyManager<String>> getProxyManager() {
-        return getConnection().map(conn -> proxyManager);
-    }
-
     private void connect() {
         if (closed) {
             return;
@@ -94,11 +82,6 @@ public class RedisConnectionProvider implements AutoCloseable {
                             return;
                         }
                         attempt = 0;
-                        proxyManager = Bucket4jLettuce
-                                .casBasedBuilder(conn)
-                                .expirationAfterWrite(ExpirationAfterWriteStrategy
-                                        .basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(1)))
-                                .build();
                         connection = conn;
                         log.info("Connected to Redis");
                     });
