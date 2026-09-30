@@ -9,6 +9,7 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -46,9 +47,10 @@ public class RedisConnectionProvider implements AutoCloseable {
     private volatile boolean closed;
     private int attempt;
 
-    public RedisConnectionProvider(RedisClient client, RedisURI uri) {
+    public RedisConnectionProvider(RedisClient client, RedisURI uri, MeterRegistry meterRegistry) {
         this.client = client;
         this.uri = uri;
+        meterRegistry.gauge("mint.redis.connected", this, provider -> provider.getConnection().isPresent() ? 1 : 0);
         connect();
     }
 

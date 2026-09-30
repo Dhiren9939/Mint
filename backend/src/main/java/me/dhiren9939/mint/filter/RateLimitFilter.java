@@ -4,6 +4,9 @@ import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -52,15 +55,29 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RedisConnectionProvider redisConnectionProvider;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     @Override
     public void doFilterInternal(HttpServletRequest request,
                                  HttpServletResponse response,
                                  FilterChain filterChain) throws ServletException, IOException {
 
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            doFilterTimed(request, response, filterChain);
+        } finally {
+            sample.stop(meterRegistry.timer("mint.ratelimit.duration"));
+        }
+    }
+
+    private void doFilterTimed(HttpServletRequest request,
+                               HttpServletResponse response,
+                               FilterChain filterChain) throws ServletException, IOException {
+
         Optional<ProxyManager<String>> proxyManager = redisConnectionProvider.getProxyManager();
         if (proxyManager.isEmpty()) {
             // Fail open, no rate limiting at all while the cache is unavailable
+            recordDecision("fail_open", "none");
             filterChain.doFilter(request, response);
             return;
         }
@@ -71,16 +88,27 @@ public class RateLimitFilter extends OncePerRequestFilter {
         } catch (RuntimeException e) {
             // Fail open, a cache outage must not take the API down
             log.warn("Rate limiter unavailable, allowing request: {}", e.toString());
+            recordDecision("fail_open", "none");
             filterChain.doFilter(request, response);
             return;
         }
 
         if (rejectedBy != null) {
+            recordDecision("rejected", rejectedBy);
             rejectRequest(response, rejectedBy);
             return;
         }
 
+        recordDecision("allowed", "none");
         filterChain.doFilter(request, response);
+    }
+
+    private void recordDecision(String result, String limit) {
+        Counter.builder("mint.ratelimit.decisions")
+                .tag("result", result)
+                .tag("limit", limit)
+                .register(meterRegistry)
+                .increment();
     }
 
     /**

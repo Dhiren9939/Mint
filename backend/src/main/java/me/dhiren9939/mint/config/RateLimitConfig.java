@@ -5,6 +5,7 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.SocketOptions;
 import io.lettuce.core.TimeoutOptions;
+import io.micrometer.core.instrument.MeterRegistry;
 import me.dhiren9939.mint.common.RedisConnectionProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -66,7 +67,7 @@ public class RateLimitConfig {
     }
 
     @Bean(destroyMethod = "close")
-    public RedisConnectionProvider redisConnectionProvider(RedisClient redisClient) {
-        return new RedisConnectionProvider(redisClient, redisUri());
+    public RedisConnectionProvider redisConnectionProvider(RedisClient redisClient, MeterRegistry meterRegistry) {
+        return new RedisConnectionProvider(redisClient, redisUri(), meterRegistry);
     }
 }

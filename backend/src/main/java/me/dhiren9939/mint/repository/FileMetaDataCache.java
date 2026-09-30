@@ -10,5 +10,11 @@ public interface FileMetaDataCache {
 
     void put(FileMetaData fileMetaData);
 
+    /**
+     * Caches the entry only if none exists yet. Used to fill the cache after a read miss, so a
+     * value read from the database just before a concurrent {@link #put} can't overwrite it.
+     */
+    void putIfAbsent(FileMetaData fileMetaData);
+
     void evict(String fileCode);
 }

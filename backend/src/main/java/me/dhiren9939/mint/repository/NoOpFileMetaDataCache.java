@@ -25,6 +25,11 @@ public class NoOpFileMetaDataCache implements FileMetaDataCache {
     }
 
     @Override
+    public void putIfAbsent(FileMetaData fileMetaData) {
+        // no-op
+    }
+
+    @Override
     public void evict(String fileCode) {
         // no-op
     }

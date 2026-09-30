@@ -1,5 +1,6 @@
 package me.dhiren9939.mint.config;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import me.dhiren9939.mint.common.RedisConnectionProvider;
 import me.dhiren9939.mint.filter.RateLimitFilter;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,8 +42,9 @@ public class WebFilterConfig {
 
     @Bean
     public RateLimitFilter rateLimitFilter(RedisConnectionProvider redisConnectionProvider,
-                                           ObjectMapper objectMapper) {
-        return new RateLimitFilter(redisConnectionProvider, objectMapper);
+                                           ObjectMapper objectMapper,
+                                           MeterRegistry meterRegistry) {
+        return new RateLimitFilter(redisConnectionProvider, objectMapper, meterRegistry);
     }
 
     @Bean

@@ -3,6 +3,8 @@ package me.dhiren9939.mint.repository;
 import io.lettuce.core.SetArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.common.RedisConnectionProvider;
@@ -35,44 +37,114 @@ public class RedisFileMetaDataCache implements FileMetaDataCache {
 
     private final RedisConnectionProvider redisConnectionProvider;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     @Value("${mint.cache.ttl-seconds:300}")
     private long ttlSeconds;
 
     @Override
     public Optional<FileMetaData> get(String fileCode) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String result = "error";
         try {
-            return commands()
-                    .map(commands -> commands.get(key(fileCode)))
-                    .map(bytes -> objectMapper.readValue(bytes, FileMetaData.class));
+            Optional<RedisCommands<String, byte[]>> commands = commands();
+            if (commands.isEmpty()) {
+                result = "disconnected";
+                return Optional.empty();
+            }
+
+            byte[] bytes = commands.get().get(key(fileCode));
+            if (bytes == null) {
+                result = "miss";
+                return Optional.empty();
+            }
+
+            FileMetaData value = objectMapper.readValue(bytes, FileMetaData.class);
+            result = "hit";
+            return Optional.of(value);
         } catch (RuntimeException e) {
             log.warn("Cache read failed for {}, falling back: {}", fileCode, e.toString());
+            result = "error";
             return Optional.empty();
+        } finally {
+            sample.stop(cacheGetTimer(result));
         }
     }
 
     @Override
     public void put(FileMetaData fileMetaData) {
+        timePut(fileMetaData, "put",
+                (commands, key, expiresAt, value) -> commands.set(key, value, SetArgs.Builder.exAt(expiresAt)),
+                this::tryEvict,
+                (commands, key, e) -> {
+                    log.warn("Cache write failed for {}, evicting instead: {}", key, e.toString());
+                    tryEvict(commands, key);
+                });
+    }
+
+    @Override
+    public void putIfAbsent(FileMetaData fileMetaData) {
+        // A failed fill leaves nothing behind, and evicting here could drop a newer entry
+        // a concurrent put just wrote, so both the expired case and the write failure are
+        // only logged, never evicted
+        timePut(fileMetaData, "put_if_absent",
+                (commands, key, expiresAt, value) -> commands.set(key, value, SetArgs.Builder.exAt(expiresAt).nx()),
+                (commands, key) -> { },
+                (commands, key, e) -> log.warn("Cache fill failed for {}: {}", key, e.toString()));
+    }
+
+    @FunctionalInterface
+    private interface SetCall {
+        void set(RedisCommands<String, byte[]> commands, String key, long expiresAt, byte[] value);
+    }
+
+    @FunctionalInterface
+    private interface EvictCall {
+        void evict(RedisCommands<String, byte[]> commands, String key);
+    }
+
+    @FunctionalInterface
+    private interface SetErrorCall {
+        void onError(RedisCommands<String, byte[]> commands, String key, RuntimeException e);
+    }
+
+    private void timePut(FileMetaData fileMetaData, String op, SetCall setCall, EvictCall onExpired,
+                         SetErrorCall onSetError) {
         commands().ifPresent(commands -> {
-            String key = key(fileMetaData.getFileCode());
-            long cleanAtEpoch = epochSecond(fileMetaData.getCleanAt());
-            long now = System.currentTimeMillis() / 1000;
-
-            if (cleanAtEpoch <= now) {
-                tryEvict(commands, key);
-                return;
-            }
-
-            long expiresAt = Math.min(now + ttlSeconds, cleanAtEpoch);
-
+            Timer.Sample sample = Timer.start(meterRegistry);
+            String result = "ok";
             try {
-                byte[] value = objectMapper.writeValueAsBytes(fileMetaData);
-                commands.set(key, value, SetArgs.Builder.exAt(expiresAt));
-            } catch (RuntimeException e) {
-                log.warn("Cache write failed for {}, evicting instead: {}", key, e.toString());
-                tryEvict(commands, key);
+                String key = key(fileMetaData.getFileCode());
+                long cleanAtEpoch = epochSecond(fileMetaData.getCleanAt());
+                long now = System.currentTimeMillis() / 1000;
+
+                if (cleanAtEpoch <= now) {
+                    onExpired.evict(commands, key);
+                    return;
+                }
+
+                long expiresAt = Math.min(now + ttlSeconds, cleanAtEpoch);
+
+                try {
+                    byte[] value = objectMapper.writeValueAsBytes(fileMetaData);
+                    setCall.set(commands, key, expiresAt, value);
+                } catch (RuntimeException e) {
+                    result = "error";
+                    onSetError.onError(commands, key, e);
+                }
+            } finally {
+                sample.stop(Timer.builder("mint.cache.put")
+                        .tag("op", op)
+                        .tag("result", result)
+                        .register(meterRegistry));
             }
         });
+    }
+
+    private Timer cacheGetTimer(String result) {
+        return Timer.builder("mint.cache.get")
+                .tag("result", result)
+                .register(meterRegistry);
     }
 
     @Override

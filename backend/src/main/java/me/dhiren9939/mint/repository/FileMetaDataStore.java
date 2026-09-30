@@ -1,5 +1,7 @@
 package me.dhiren9939.mint.repository;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import me.dhiren9939.mint.entity.FileMetaData;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -7,6 +9,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Slf4j
 @Primary
@@ -15,15 +18,19 @@ public class FileMetaDataStore implements FileMetaDataRepository {
 
     private final FileMetaDataRepository dbRepo;
     private final FileMetaDataCache cache;
+    private final MeterRegistry meterRegistry;
 
-    public FileMetaDataStore(@Qualifier("dynamoDbRepository") FileMetaDataRepository dbRepo, FileMetaDataCache cache) {
+    public FileMetaDataStore(@Qualifier("dynamoDbRepository") FileMetaDataRepository dbRepo,
+                             FileMetaDataCache cache,
+                             MeterRegistry meterRegistry) {
         this.dbRepo = dbRepo;
         this.cache = cache;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
     public FileMetaData save(FileMetaData fileMetaData) {
-        FileMetaData saved = dbRepo.save(fileMetaData);
+        FileMetaData saved = timed("save", () -> dbRepo.save(fileMetaData));
         cache.put(saved);
         return saved;
     }
@@ -31,7 +38,12 @@ public class FileMetaDataStore implements FileMetaDataRepository {
     @Override
     public Optional<FileMetaData> findByFileCode(String fileCode) {
         Optional<FileMetaData> cached = cache.get(fileCode);
-        return cached.isPresent() ? cached : dbRepo.findByFileCode(fileCode);
+        if (cached.isPresent()) {
+            return cached;
+        }
+        Optional<FileMetaData> found = timed("find", () -> dbRepo.findByFileCode(fileCode));
+        found.ifPresent(cache::putIfAbsent);
+        return found;
     }
 
     @Override
@@ -40,13 +52,22 @@ public class FileMetaDataStore implements FileMetaDataRepository {
         if (cached.isPresent()) {
             return cached.filter(fileMetaData -> fileMetaData.getFileKey().equals(fileKey));
         }
-        return dbRepo.findByFileKeyAndFileCode(fileKey, fileCode);
+        Optional<FileMetaData> found = timed("find", () -> dbRepo.findByFileKeyAndFileCode(fileKey, fileCode));
+        found.ifPresent(cache::putIfAbsent);
+        return found;
     }
 
     @Override
     public boolean isFileCodeFree(String fileCode) {
         // Bypasses the cache: a fresh code is almost always a cache miss anyway, and
         // uniqueness checks need the Dynamo consistent read, not a possibly-stale cache entry.
-        return dbRepo.isFileCodeFree(fileCode);
+        return timed("isFree", () -> dbRepo.isFileCodeFree(fileCode));
+    }
+
+    private <T> T timed(String op, Supplier<T> call) {
+        return Timer.builder("mint.db.duration")
+                .tag("op", op)
+                .register(meterRegistry)
+                .record(call);
     }
 }
