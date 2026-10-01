@@ -55,7 +55,8 @@ resource "aws_iam_policy" "mint_api_role_policy" {
           Effect = "Allow",
           Action = [
             "dynamodb:GetItem",
-            "dynamodb:PutItem"
+            "dynamodb:PutItem",
+            "dynamodb:DeleteItem"
           ],
           Resource = var.file_meta_data_table_arn
         },
