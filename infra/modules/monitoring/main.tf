@@ -31,14 +31,14 @@ locals {
       {
         type = "metric"
         properties = {
-          title  = "Requests per minute by status class (app)"
+          title  = "Requests per minute by outcome (app)"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            [{ expression = "SUM(${local.http_search} status=2*', 'Sum', 60))", label = "2xx" }],
-            [{ expression = "SUM(${local.http_search} status=4*', 'Sum', 60))", label = "4xx" }],
-            [{ expression = "SUM(${local.http_search} status=5*', 'Sum', 60))", label = "5xx" }]
+            [{ expression = "SUM(${local.http_search} outcome=\"SUCCESS\"', 'Sum', 60))", label = "success" }],
+            [{ expression = "SUM(${local.http_search} outcome=\"CLIENT_ERROR\"', 'Sum', 60))", label = "client error" }],
+            [{ expression = "SUM(${local.http_search} outcome=\"SERVER_ERROR\"', 'Sum', 60))", label = "server error" }]
           ]
         }
       }
@@ -70,8 +70,8 @@ locals {
           region = var.region
           period = 60
           metrics = [
-            [{ expression = "SUM(${local.http_search} status=429', 'Sum', 60))", label = "429" }],
-            [{ expression = "SUM(${local.http_search} status=5*', 'Sum', 60))", label = "5xx" }]
+            [{ expression = "SUM(${local.http_search} status=\"429\"', 'Sum', 60))", label = "429" }],
+            [{ expression = "SUM(${local.http_search} outcome=\"SERVER_ERROR\"', 'Sum', 60))", label = "server error" }]
           ]
         }
       }
