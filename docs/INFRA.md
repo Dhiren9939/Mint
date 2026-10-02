@@ -22,11 +22,11 @@ The client IP for rate limiting comes from `X-Forwarded-For`. The app uses Tomca
 
 | Setting | Value |
 | --- | --- |
-| Launch type | Fargate, x86, 0.5 vCPU / 1 GB per task |
+| Launch type | Fargate, x86, 1 vCPU / 2 GB per task |
 | Tasks | 2 to 4, target tracking on 60% average CPU (scale out after 60s, in after 300s) |
 | Placement | App subnets in both AZs, no public IP |
 | Deploys | Rolling, 100% min healthy / 200% max, circuit breaker with rollback |
-| Health check grace | 120s (startup takes about 50s on 0.5 vCPU) |
+| Health check grace | 60s (startup took about 50s on 0.5 vCPU, not re-measured on 1 vCPU) |
 | Deregistration delay | 30s, then SIGTERM; the app shuts down gracefully within 20s, SIGKILL after 30s |
 | Logs | CloudWatch `/ecs/mint-api`, 7 days |
 | Image | `ghcr.io/dhiren9939/mint-backend`; Terraform seeds `:latest`, `backend-cd` deploys the commit tag |

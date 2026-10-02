@@ -139,8 +139,8 @@ resource "aws_ecs_service" "api" {
   desired_count   = var.min_tasks
   launch_type     = "FARGATE"
 
-  // Startup takes ~50s on 0.5 vCPU, don't count failed health checks before then
-  health_check_grace_period_seconds = 120
+  // Startup took ~50s on 0.5 vCPU, don't count failed health checks before then
+  health_check_grace_period_seconds = 60
 
   // Rolling deploy: new tasks start next to the old ones, old ones stop once new ones are healthy
   deployment_minimum_healthy_percent = 100

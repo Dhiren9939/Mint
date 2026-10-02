@@ -45,13 +45,13 @@ variable "image" {
 variable "cpu" {
   type        = number
   description = "Task CPU units, 1024 = 1 vCPU"
-  default     = 512
+  default     = 1024
 }
 
 variable "memory" {
   type        = number
-  description = "Task memory in MiB"
-  default     = 1024
+  description = "Task memory in MiB, Fargate needs 2048 to 8192 for 1 vCPU"
+  default     = 2048
 }
 
 variable "min_tasks" {
