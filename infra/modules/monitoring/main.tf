@@ -4,6 +4,14 @@ locals {
   # From nullness, which is always known at plan time, even when the name itself isn't yet
   has_log_group = var.ecs != null || var.log_group_name != null
 
+  # The Micrometer CloudWatch registry publishes gauges as <name>.value and timers as
+  # <name>.count / .sum / .avg / .max / .percentile.value (with a phi dimension), all tagged with env.
+  # Every app widget filters on env, otherwise another environment's metrics in the same namespace,
+  # or an earlier run's, would show up. These are the dimension sets the app really publishes with.
+  env_filter  = "env=\"${var.env}\""
+  http_search = "SEARCH('{${var.namespace},env,error,exception,method,outcome,status,uri} ${local.env_filter} MetricName=\"http.server.requests.count\""
+  tomcat_dims = "{${var.namespace},env,name} ${local.env_filter}"
+
   # ---------------------------------------------------------------------
   # Section 1 — Outcome / RED
   #
@@ -14,19 +22,23 @@ locals {
   # each branch in jsondecode(jsonencode(...)) instead only looks like it works:
   # it passes `terraform validate`, where ids are unknown, then fails at apply,
   # where they are known and the tuples get concrete, mismatched types.
+  #
+  # Counters that only exist once something goes wrong (errors, throttles) are wrapped in
+  # FILL(m, 0), otherwise a healthy run shows "no data" instead of a flat zero.
   # ---------------------------------------------------------------------
   sec_outcome = concat(
     [
       {
         type = "metric"
         properties = {
-          title  = "Request rate by uri + status"
+          title  = "Requests per minute by status class (app)"
           view   = "timeSeries"
           region = var.region
-          stat   = "Sum"
           period = 60
           metrics = [
-            [{ expression = "SEARCH('{${var.namespace},uri,status} MetricName=\"http.server.requests\"', 'Sum', 60)", label = "" }]
+            [{ expression = "SUM(${local.http_search} status=2*', 'Sum', 60))", label = "2xx" }],
+            [{ expression = "SUM(${local.http_search} status=4*', 'Sum', 60))", label = "4xx" }],
+            [{ expression = "SUM(${local.http_search} status=5*', 'Sum', 60))", label = "5xx" }]
           ]
         }
       }
@@ -35,15 +47,17 @@ locals {
       {
         type = "metric"
         properties = {
-          title  = "4xx / 5xx rate (ALB)"
+          title  = "4xx / 5xx (ALB)"
           view   = "timeSeries"
           region = var.region
-          stat   = "Sum"
           period = 60
           metrics = [
-            ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", var.alb.arn_suffix, { stat = "Sum" }],
-            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb.arn_suffix, { stat = "Sum" }],
-            ["AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", var.alb.arn_suffix, { stat = "Sum" }]
+            ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", var.alb.arn_suffix, { id = "a4", stat = "Sum", visible = false }],
+            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb.arn_suffix, { id = "a5", stat = "Sum", visible = false }],
+            ["AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", var.alb.arn_suffix, { id = "a6", stat = "Sum", visible = false }],
+            [{ expression = "FILL(a4, 0)", label = "Target 4xx" }],
+            [{ expression = "FILL(a5, 0)", label = "Target 5xx" }],
+            [{ expression = "FILL(a6, 0)", label = "ELB 5xx" }]
           ]
         }
       }
@@ -51,14 +65,13 @@ locals {
       {
         type = "metric"
         properties = {
-          title  = "4xx / 429 / 5xx rate (app)"
+          title  = "429 / 5xx (app)"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            [{ expression = "SEARCH('{${var.namespace},uri,status} MetricName=\"http.server.requests\" status=4*', 'Sum', 60)", label = "4xx" }],
-            [{ expression = "SEARCH('{${var.namespace},uri,status} MetricName=\"http.server.requests\" status=5*', 'Sum', 60)", label = "5xx" }],
-            [{ expression = "SEARCH('{${var.namespace},uri,status} MetricName=\"http.server.requests\" status=429', 'Sum', 60)", label = "429" }]
+            [{ expression = "SUM(${local.http_search} status=429', 'Sum', 60))", label = "429" }],
+            [{ expression = "SUM(${local.http_search} status=5*', 'Sum', 60))", label = "5xx" }]
           ]
         }
       }
@@ -80,18 +93,17 @@ locals {
       }
       ]) : jsonencode([
       {
-        # EC2 arms get their percentiles from app metrics; Micrometer percentiles are
-        # per-instance only, so this is a placeholder, not a true cross-instance percentile.
+        # Micrometer percentiles are per instance and http.server.requests has none here, so this is
+        # the average and the worst request, not a cross-instance percentile.
         type = "metric"
         properties = {
-          title  = "Latency p50 / p95 / p99 (app, per instance)"
+          title  = "Latency avg / max (app)"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            [var.namespace, "http.server.requests", { stat = "p50", label = "p50" }],
-            [var.namespace, "http.server.requests", { stat = "p95", label = "p95" }],
-            [var.namespace, "http.server.requests", { stat = "p99", label = "p99" }]
+            [{ expression = "AVG(SEARCH('{${var.namespace},env,error,exception,method,outcome,status,uri} ${local.env_filter} MetricName=\"http.server.requests.avg\"', 'Average', 60))", label = "avg" }],
+            [{ expression = "MAX(SEARCH('{${var.namespace},env,error,exception,method,outcome,status,uri} ${local.env_filter} MetricName=\"http.server.requests.max\"', 'Maximum', 60))", label = "max" }]
           ]
         }
       }
@@ -100,16 +112,42 @@ locals {
       {
         type = "metric"
         properties = {
-          title  = "Cache hit / miss / error"
+          title  = "Cache gets per minute (hit / miss / error)"
           view   = "timeSeries"
           region = var.region
           stat   = "Sum"
           period = 60
           metrics = [
-            [var.namespace, "mint.cache.get", "result", "hit", { stat = "Sum", label = "hit" }],
-            [var.namespace, "mint.cache.get", "result", "miss", { stat = "Sum", label = "miss" }],
-            [var.namespace, "mint.cache.get", "result", "error", { stat = "Sum", label = "error" }],
-            [var.namespace, "mint.cache.get", "result", "disconnected", { stat = "Sum", label = "disconnected" }]
+            [var.namespace, "mint.cache.get.count", "env", var.env, "result", "hit", { stat = "Sum", label = "hit" }],
+            [var.namespace, "mint.cache.get.count", "env", var.env, "result", "miss", { stat = "Sum", label = "miss" }],
+            [var.namespace, "mint.cache.get.count", "env", var.env, "result", "error", { stat = "Sum", label = "error" }]
+          ]
+        }
+      },
+      {
+        type = "metric"
+        properties = {
+          title  = "Cache hit rate % (file metadata)"
+          view   = "timeSeries"
+          region = var.region
+          period = 60
+          yAxis  = { left = { min = 0, max = 100 } }
+          metrics = [
+            [var.namespace, "mint.cache.get.count", "env", var.env, "result", "hit", { id = "h", stat = "Sum", visible = false }],
+            [var.namespace, "mint.cache.get.count", "env", var.env, "result", "miss", { id = "m", stat = "Sum", visible = false }],
+            [{ expression = "100 * h / (h + m)", label = "hit rate %" }]
+          ]
+        }
+      },
+      {
+        type = "metric"
+        properties = {
+          title  = "Rate limiter decisions per minute"
+          view   = "timeSeries"
+          region = var.region
+          period = 60
+          metrics = [
+            [{ expression = "SEARCH('{${var.namespace},env,limit,result} ${local.env_filter} MetricName=\"mint.ratelimit.decisions.count\"', 'Sum', 60)", label = "" }]
           ]
         }
       }
@@ -123,63 +161,66 @@ locals {
     {
       type = "metric"
       properties = {
-        title  = "Tomcat threads busy vs max"
+        title  = "Tomcat threads busy vs max (per task)"
         view   = "timeSeries"
         region = var.region
         period = 60
         metrics = [
-          [var.namespace, "tomcat.threads.busy", { stat = "Average", label = "busy" }],
-          [var.namespace, "tomcat.threads.config.max", { stat = "Average", label = "max" }]
+          [{ expression = "SEARCH('${local.tomcat_dims} MetricName=\"tomcat.threads.busy.value\"', 'Average', 60)", label = "busy avg" }],
+          [{ expression = "SEARCH('${local.tomcat_dims} MetricName=\"tomcat.threads.busy.value\"', 'Maximum', 60)", label = "busy max" }],
+          [{ expression = "SEARCH('${local.tomcat_dims} MetricName=\"tomcat.threads.config.max.value\"', 'Average', 60)", label = "limit" }]
         ]
       }
     },
     {
       type = "metric"
       properties = {
-        title  = "Tomcat connections"
+        title  = "Tomcat connections (per task)"
         view   = "timeSeries"
         region = var.region
         period = 60
         metrics = [
-          [{ expression = "SEARCH('{${var.namespace}} MetricName=\"tomcat.connections.current\"', 'Average', 60)", label = "current" }]
+          [{ expression = "SEARCH('${local.tomcat_dims} MetricName=\"tomcat.connections.current.value\"', 'Average', 60)", label = "current" }],
+          [{ expression = "SEARCH('${local.tomcat_dims} MetricName=\"tomcat.connections.config.max.value\"', 'Average', 60)", label = "limit" }]
         ]
       }
     },
     {
       type = "metric"
       properties = {
-        title  = "Heap used vs max"
+        title  = "Heap used vs old gen max (per task)"
         view   = "timeSeries"
         region = var.region
         period = 60
         metrics = [
-          [var.namespace, "jvm.memory.used", { stat = "Average", label = "used" }],
-          [var.namespace, "jvm.memory.max", { stat = "Average", label = "max" }]
+          [{ expression = "SUM(SEARCH('{${var.namespace},area,env,id} ${local.env_filter} area=\"heap\" MetricName=\"jvm.memory.used.value\"', 'Average', 60))", label = "heap used" }],
+          [{ expression = "SEARCH('{${var.namespace},area,env,id} ${local.env_filter} id=\"G1 Old Gen\" MetricName=\"jvm.memory.max.value\"', 'Average', 60)", label = "heap max" }]
         ]
       }
     },
     {
       type = "metric"
       properties = {
-        title  = "GC pause"
+        title  = "GC pauses per minute / longest pause"
         view   = "timeSeries"
         region = var.region
         period = 60
         metrics = [
-          [var.namespace, "jvm.gc.pause", { stat = "Average", label = "avg" }],
-          [var.namespace, "jvm.gc.pause", { stat = "Maximum", label = "max" }]
+          [{ expression = "SUM(SEARCH('{${var.namespace},action,cause,env,gc} ${local.env_filter} MetricName=\"jvm.gc.pause.count\"', 'Sum', 60))", label = "pauses / min" }],
+          [{ expression = "MAX(SEARCH('{${var.namespace},action,cause,env,gc} ${local.env_filter} MetricName=\"jvm.gc.pause.max\"', 'Maximum', 60))", label = "longest pause (s)", yAxis = "right" }]
         ]
       }
     },
     {
       type = "metric"
       properties = {
-        title  = "Process CPU"
+        title  = "Process CPU (0 to 1 of the task)"
         view   = "timeSeries"
         region = var.region
         period = 60
         metrics = [
-          [var.namespace, "process.cpu.usage", { stat = "Average" }]
+          [var.namespace, "process.cpu.usage.value", "env", var.env, { stat = "Average", label = "avg" }],
+          [var.namespace, "process.cpu.usage.value", "env", var.env, { stat = "Maximum", label = "busiest task" }]
         ]
       }
     },
@@ -191,7 +232,7 @@ locals {
         region = var.region
         period = 60
         metrics = [
-          [var.namespace, "jvm.threads.live", { stat = "Average" }]
+          [var.namespace, "jvm.threads.live.value", "env", var.env, { stat = "Average" }]
         ]
       }
     }
@@ -205,25 +246,28 @@ locals {
       {
         type = "metric"
         properties = {
-          title  = "ECS service CPU / memory (Container Insights)"
+          title  = "ECS service CPU / memory %"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            ["ECS/ContainerInsights", "CPUUtilization", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Average", label = "CPU" }],
-            ["ECS/ContainerInsights", "MemoryUtilization", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Average", label = "Memory" }]
+            ["AWS/ECS", "CPUUtilization", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Average", label = "CPU avg" }],
+            ["AWS/ECS", "CPUUtilization", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Maximum", label = "CPU max" }],
+            ["AWS/ECS", "MemoryUtilization", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Average", label = "Memory avg" }]
           ]
         }
       },
       {
         type = "metric"
         properties = {
-          title  = "ECS running task count"
+          title  = "ECS tasks: desired / running / pending"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            ["ECS/ContainerInsights", "RunningTaskCount", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Average" }]
+            ["ECS/ContainerInsights", "DesiredTaskCount", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Average", label = "desired" }],
+            ["ECS/ContainerInsights", "RunningTaskCount", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Average", label = "running" }],
+            ["ECS/ContainerInsights", "PendingTaskCount", "ClusterName", var.ecs.cluster_name, "ServiceName", var.ecs.service_name, { stat = "Average", label = "pending" }]
           ]
         }
       }
@@ -232,27 +276,29 @@ locals {
       {
         type = "metric"
         properties = {
-          title  = "ALB healthy hosts"
+          title  = "ALB healthy / unhealthy hosts"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", var.alb.target_group_arn_suffix, "LoadBalancer", var.alb.arn_suffix, { stat = "Average" }]
+            ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", var.alb.target_group_arn_suffix, "LoadBalancer", var.alb.arn_suffix, { stat = "Average", label = "healthy" }],
+            ["AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", var.alb.target_group_arn_suffix, "LoadBalancer", var.alb.arn_suffix, { stat = "Average", label = "unhealthy" }]
           ]
         }
       },
       {
         type = "metric"
         properties = {
-          title  = "ALB ELB 5xx / rejected / target connection errors"
+          title  = "ALB rejected / target connection errors / requests"
           view   = "timeSeries"
           region = var.region
-          stat   = "Sum"
           period = 60
           metrics = [
-            ["AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", var.alb.arn_suffix, { stat = "Sum", label = "ELB 5xx" }],
-            ["AWS/ApplicationELB", "RejectedConnectionCount", "LoadBalancer", var.alb.arn_suffix, { stat = "Sum", label = "Rejected" }],
-            ["AWS/ApplicationELB", "TargetConnectionErrorCount", "LoadBalancer", var.alb.arn_suffix, { stat = "Sum", label = "Target conn errors" }]
+            ["AWS/ApplicationELB", "RejectedConnectionCount", "LoadBalancer", var.alb.arn_suffix, { id = "r1", stat = "Sum", visible = false }],
+            ["AWS/ApplicationELB", "TargetConnectionErrorCount", "LoadBalancer", var.alb.arn_suffix, { id = "r2", stat = "Sum", visible = false }],
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb.arn_suffix, { id = "r3", stat = "Sum", yAxis = "right", label = "requests" }],
+            [{ expression = "FILL(r1, 0)", label = "Rejected" }],
+            [{ expression = "FILL(r2, 0)", label = "Target conn errors" }]
           ]
         }
       }
@@ -266,11 +312,11 @@ locals {
         title  = "NAT ErrorPortAllocation"
         view   = "timeSeries"
         region = var.region
-        stat   = "Sum"
         period = 60
-        metrics = [
-          for az, id in var.nat.nat_gateway_ids : ["AWS/NATGateway", "ErrorPortAllocation", "NatGatewayId", id, { stat = "Sum", label = az }]
-        ]
+        metrics = concat(
+          [for az, id in var.nat.nat_gateway_ids : ["AWS/NATGateway", "ErrorPortAllocation", "NatGatewayId", id, { id = "n_${az}", stat = "Sum", visible = false }]],
+          [for az, id in var.nat.nat_gateway_ids : [{ expression = "FILL(n_${az}, 0)", label = az }]]
+        )
       }
     }
   ]))
@@ -349,21 +395,24 @@ locals {
 
   sec_compute = concat(local.sec_compute_ecs, local.sec_compute_nat, local.sec_compute_ec2)
 
+
   # ---------------------------------------------------------------------
   # Section 4 — Dependency timers (app view, Mint namespace)
+  # Percentiles are per task (Micrometer), so they show the worst task rather than a fleet percentile.
   # ---------------------------------------------------------------------
   sec_deps = concat(
     [
       {
         type = "metric"
         properties = {
-          title  = "Rate limiter duration"
+          title  = "Rate limiter duration (Lua call)"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            [var.namespace, "mint.ratelimit.duration", { stat = "Average", label = "avg" }],
-            [var.namespace, "mint.ratelimit.duration", { stat = "p95", label = "p95" }]
+            [var.namespace, "mint.ratelimit.duration.avg", "env", var.env, { stat = "Average", label = "avg" }],
+            [var.namespace, "mint.ratelimit.duration.percentile.value", "env", var.env, "phi", "0.95", { stat = "Maximum", label = "p95 (worst task)" }],
+            [var.namespace, "mint.ratelimit.duration.percentile.value", "env", var.env, "phi", "0.99", { stat = "Maximum", label = "p99 (worst task)" }]
           ]
         }
       },
@@ -375,34 +424,34 @@ locals {
           region = var.region
           period = 60
           metrics = [
-            [var.namespace, "mint.cache.get", { stat = "Average", label = "get avg" }],
-            [var.namespace, "mint.cache.put", { stat = "Average", label = "put avg" }]
+            [{ expression = "AVG(SEARCH('{${var.namespace},env,result} ${local.env_filter} MetricName=\"mint.cache.get.avg\"', 'Average', 60))", label = "get avg" }],
+            [{ expression = "AVG(SEARCH('{${var.namespace},env,op,result} ${local.env_filter} MetricName=\"mint.cache.put.avg\"', 'Average', 60))", label = "put avg" }],
+            [{ expression = "MAX(SEARCH('{${var.namespace},env,phi,result} ${local.env_filter} phi=\"0.99\" MetricName=\"mint.cache.get.percentile.value\"', 'Maximum', 60))", label = "get p99 (worst task)" }]
           ]
         }
       },
       {
         type = "metric"
         properties = {
-          title  = "DB duration by op"
+          title  = "DB duration by op (avg and p99 of the worst task)"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            [var.namespace, "mint.db.duration", "op", "find", { stat = "Average", label = "find" }],
-            [var.namespace, "mint.db.duration", "op", "save", { stat = "Average", label = "save" }],
-            [var.namespace, "mint.db.duration", "op", "isFree", { stat = "Average", label = "isFree" }]
+            [{ expression = "SEARCH('{${var.namespace},env,op} ${local.env_filter} MetricName=\"mint.db.duration.avg\"', 'Average', 60)", label = "" }],
+            [{ expression = "SEARCH('{${var.namespace},env,op,phi} ${local.env_filter} phi=\"0.99\" MetricName=\"mint.db.duration.percentile.value\"', 'Maximum', 60)", label = "" }]
           ]
         }
       },
       {
         type = "metric"
         properties = {
-          title  = "Redis connected"
+          title  = "Redis connected (min across tasks, 1 = all connected)"
           view   = "timeSeries"
           region = var.region
           period = 60
           metrics = [
-            [var.namespace, "mint.redis.connected", { stat = "Average" }]
+            [var.namespace, "mint.redis.connected.value", "env", var.env, { stat = "Minimum" }]
           ]
         }
       }
@@ -437,8 +486,9 @@ locals {
         region = var.region
         period = 60
         metrics = [
-          ["AWS/DynamoDB", "SuccessfulRequestLatency", "TableName", var.dynamo.table_name, "Operation", "GetItem", { stat = "Average", label = "GetItem" }],
-          ["AWS/DynamoDB", "SuccessfulRequestLatency", "TableName", var.dynamo.table_name, "Operation", "PutItem", { stat = "Average", label = "PutItem" }]
+          ["AWS/DynamoDB", "SuccessfulRequestLatency", "TableName", var.dynamo.table_name, "Operation", "GetItem", { stat = "Average", label = "GetItem avg" }],
+          ["AWS/DynamoDB", "SuccessfulRequestLatency", "TableName", var.dynamo.table_name, "Operation", "GetItem", { stat = "p99", label = "GetItem p99" }],
+          ["AWS/DynamoDB", "SuccessfulRequestLatency", "TableName", var.dynamo.table_name, "Operation", "PutItem", { stat = "Average", label = "PutItem avg" }]
         ]
       }
     },
@@ -462,16 +512,18 @@ locals {
         title  = "DynamoDB throttles / system errors"
         view   = "timeSeries"
         region = var.region
-        stat   = "Sum"
         period = 60
         metrics = [
-          ["AWS/DynamoDB", "ThrottledRequests", "TableName", var.dynamo.table_name, { stat = "Sum", label = "Throttled" }],
-          ["AWS/DynamoDB", "SystemErrors", "TableName", var.dynamo.table_name, { stat = "Sum", label = "System errors" }]
+          ["AWS/DynamoDB", "ThrottledRequests", "TableName", var.dynamo.table_name, { id = "d1", stat = "Sum", visible = false }],
+          ["AWS/DynamoDB", "SystemErrors", "TableName", var.dynamo.table_name, { id = "d2", stat = "Sum", visible = false }],
+          [{ expression = "FILL(d1, 0)", label = "Throttled" }],
+          [{ expression = "FILL(d2, 0)", label = "System errors" }]
         ]
       }
     }
   ]))
 
+  # ElastiCache publishes these per node (CacheClusterId), not per replication group
   sec_valkey = jsondecode(var.valkey == null ? "[]" : jsonencode([
     {
       type = "metric"
@@ -488,15 +540,15 @@ locals {
     {
       type = "metric"
       properties = {
-        title  = "Valkey command latency (Eval / Get / Set)"
+        title  = "Valkey command latency (Eval / Get / Set, µs)"
         view   = "timeSeries"
         region = var.region
         period = 60
-        metrics = [
-          ["AWS/ElastiCache", "EvalBasedCmdsLatency", "ReplicationGroupId", var.valkey.replication_group_id, { stat = "Average", label = "EVAL" }],
-          ["AWS/ElastiCache", "GetTypeCmdsLatency", "ReplicationGroupId", var.valkey.replication_group_id, { stat = "Average", label = "GET" }],
-          ["AWS/ElastiCache", "SetTypeCmdsLatency", "ReplicationGroupId", var.valkey.replication_group_id, { stat = "Average", label = "SET" }]
-        ]
+        metrics = concat(
+          [for id in var.valkey.member_cluster_ids : ["AWS/ElastiCache", "EvalBasedCmdsLatency", "CacheClusterId", id, { stat = "Average", label = "EVAL ${id}" }]],
+          [for id in var.valkey.member_cluster_ids : ["AWS/ElastiCache", "GetTypeCmdsLatency", "CacheClusterId", id, { stat = "Average", label = "GET ${id}" }]],
+          [for id in var.valkey.member_cluster_ids : ["AWS/ElastiCache", "SetTypeCmdsLatency", "CacheClusterId", id, { stat = "Average", label = "SET ${id}" }]]
+        )
       }
     },
     {
@@ -506,24 +558,23 @@ locals {
         view   = "timeSeries"
         region = var.region
         period = 60
-        metrics = [
-          ["AWS/ElastiCache", "CurrConnections", "ReplicationGroupId", var.valkey.replication_group_id, { stat = "Average", label = "Connections" }],
-          ["AWS/ElastiCache", "DatabaseMemoryUsagePercentage", "ReplicationGroupId", var.valkey.replication_group_id, { stat = "Average", label = "Memory %" }]
-        ]
+        metrics = concat(
+          [for id in var.valkey.member_cluster_ids : ["AWS/ElastiCache", "CurrConnections", "CacheClusterId", id, { stat = "Average", label = "connections ${id}" }]],
+          [for id in var.valkey.member_cluster_ids : ["AWS/ElastiCache", "DatabaseMemoryUsagePercentage", "CacheClusterId", id, { stat = "Average", label = "memory % ${id}", yAxis = "right" }]]
+        )
       }
     },
     {
       type = "metric"
       properties = {
-        title  = "Valkey hits / misses"
+        title  = "Valkey hits / misses (engine-wide, includes limiter keys)"
         view   = "timeSeries"
         region = var.region
-        stat   = "Sum"
         period = 60
-        metrics = [
-          ["AWS/ElastiCache", "CacheHits", "ReplicationGroupId", var.valkey.replication_group_id, { stat = "Sum", label = "Hits" }],
-          ["AWS/ElastiCache", "CacheMisses", "ReplicationGroupId", var.valkey.replication_group_id, { stat = "Sum", label = "Misses" }]
-        ]
+        metrics = concat(
+          [for id in var.valkey.member_cluster_ids : ["AWS/ElastiCache", "CacheHits", "CacheClusterId", id, { stat = "Sum", label = "hits ${id}" }]],
+          [for id in var.valkey.member_cluster_ids : ["AWS/ElastiCache", "CacheMisses", "CacheClusterId", id, { stat = "Sum", label = "misses ${id}" }]]
+        )
       }
     }
   ]))
@@ -600,57 +651,49 @@ locals {
   # ---------------------------------------------------------------------
   # Section 6 — Load generator
   # ---------------------------------------------------------------------
-  # Published post-run (not live) by bench/loadgen/run-scenario.sh, namespace "K6", one
-  # data point per bench-run.yml invocation, dimension Arm=<loadgen.arm_name>. If arm_name
-  # isn't set these widgets render with no matching data rather than erroring.
-  sec_loadgen = jsondecode(var.loadgen == null || !var.loadgen.enabled ? "[]" : jsonencode(concat(
-    [
-      {
-        type = "metric"
-        properties = {
-          title  = "k6 iteration rate / dropped iterations"
-          view   = "timeSeries"
-          region = var.region
-          period = 60
-          metrics = [
-            ["K6", "iteration_rate", "Arm", coalesce(var.loadgen.arm_name, "unknown"), { stat = "Average", label = "Iteration rate" }],
-            ["K6", "dropped_iterations", "Arm", coalesce(var.loadgen.arm_name, "unknown"), { stat = "Sum", label = "Dropped iterations", yAxis = "right" }]
-          ]
-        }
-      },
-      {
-        type = "metric"
-        properties = {
-          title  = "k6 download p95 / p99 and rejection rates"
-          view   = "timeSeries"
-          region = var.region
-          period = 60
-          metrics = [
-            ["K6", "download_p95", "Arm", coalesce(var.loadgen.arm_name, "unknown"), { stat = "Average", label = "Download p95 (ms)" }],
-            ["K6", "download_p99", "Arm", coalesce(var.loadgen.arm_name, "unknown"), { stat = "Average", label = "Download p99 (ms)" }],
-            ["K6", "rate_limited_rate", "Arm", coalesce(var.loadgen.arm_name, "unknown"), { stat = "Average", label = "Rate-limited %", yAxis = "right" }],
-            ["K6", "server_errors_rate", "Arm", coalesce(var.loadgen.arm_name, "unknown"), { stat = "Average", label = "Server error %", yAxis = "right" }],
-            ["K6", "client_errors_rate", "Arm", coalesce(var.loadgen.arm_name, "unknown"), { stat = "Average", label = "Client error %", yAxis = "right" }]
-          ]
-        }
+  # The generator's own CPU, memory and network, so it can be ruled out as the bottleneck. They come
+  # from the CloudWatch agent on the box (namespace MintLoadgen) and the instance's EC2 metrics.
+  sec_loadgen = jsondecode(var.loadgen == null || !var.loadgen.enabled || var.loadgen.instance_id == null ? "[]" : jsonencode([
+    {
+      type = "metric"
+      properties = {
+        title  = "Load generator CPU %"
+        view   = "timeSeries"
+        region = var.region
+        period = 60
+        metrics = [
+          ["MintLoadgen", "cpu_usage_user", "InstanceId", var.loadgen.instance_id, "cpu", "cpu-total", { id = "lu", stat = "Average", visible = false }],
+          ["MintLoadgen", "cpu_usage_system", "InstanceId", var.loadgen.instance_id, "cpu", "cpu-total", { id = "ls", stat = "Average", visible = false }],
+          [{ expression = "lu + ls", label = "user + system" }]
+        ]
       }
-    ],
-    jsondecode(var.loadgen.instance_id == null ? "[]" : jsonencode([
-      {
-        type = "metric"
-        properties = {
-          title  = "Load-gen instance CPU / network"
-          view   = "timeSeries"
-          region = var.region
-          period = 60
-          metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", var.loadgen.instance_id, { stat = "Average", label = "CPU %" }],
-            ["AWS/EC2", "NetworkOut", "InstanceId", var.loadgen.instance_id, { stat = "Average", label = "Network out" }]
-          ]
-        }
+    },
+    {
+      type = "metric"
+      properties = {
+        title  = "Load generator memory %"
+        view   = "timeSeries"
+        region = var.region
+        period = 60
+        metrics = [
+          ["MintLoadgen", "mem_used_percent", "InstanceId", var.loadgen.instance_id, { stat = "Average" }]
+        ]
       }
-    ]))
-  )))
+    },
+    {
+      type = "metric"
+      properties = {
+        title  = "Load generator network (bytes per minute)"
+        view   = "timeSeries"
+        region = var.region
+        period = 60
+        metrics = [
+          ["AWS/EC2", "NetworkOut", "InstanceId", var.loadgen.instance_id, { stat = "Sum", label = "out" }],
+          ["AWS/EC2", "NetworkIn", "InstanceId", var.loadgen.instance_id, { stat = "Sum", label = "in" }]
+        ]
+      }
+    }
+  ]))
 
   # ---------------------------------------------------------------------
   # Generic 3-column positioning: width 8, height 6, stacked section by section

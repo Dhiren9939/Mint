@@ -85,8 +85,12 @@ variable "loadgen" {
   type = object({
     enabled     = bool
     instance_id = optional(string)
-    arm_name    = optional(string)
   })
-  description = "Whether to add the load generator section, its EC2 instance id if known, and the Arm dimension value bench-run.yml publishes k6 metrics under (matches --arm_name on that workflow) so the widgets pick up this env's runs specifically"
+  description = "Whether to add the load generator section and the instance whose CloudWatch agent (MintLoadgen) and EC2 metrics it shows"
   default     = null
+}
+
+variable "env" {
+  type        = string
+  description = "The app's env metric tag (MINT_ENV), every Mint-namespace widget filters on it"
 }

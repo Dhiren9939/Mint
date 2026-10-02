@@ -55,3 +55,9 @@ variable "REDIS_AUTH_TOKEN" {
   sensitive   = true
   description = "The Valkey AUTH token"
 }
+
+variable "loadgen_instance_id" {
+  type        = string
+  description = "Instance id of the bench load generator, adds its CPU, memory and network to the dashboard. The load generator is a separate Terraform root, so set this when it is up"
+  default     = null
+}

@@ -109,6 +109,7 @@ module "elasticache" {
 module "monitoring" {
   source = "./modules/monitoring"
   name   = "${local.name}-dashboard"
+  env    = local.name
   region = var.region
 
   ecs = {
@@ -133,5 +134,10 @@ module "monitoring" {
 
   nat = {
     nat_gateway_ids = module.vpc.nat_gateway_ids
+  }
+
+  loadgen = var.loadgen_instance_id == null ? null : {
+    enabled     = true
+    instance_id = var.loadgen_instance_id
   }
 }
