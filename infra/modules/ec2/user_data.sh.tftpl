@@ -86,7 +86,7 @@ UNIT
 systemctl daemon-reload
 systemctl enable --now caddy-cert-sync.timer
 
-# pull the image ci built, only build here when ghcr isn't reachable without a login
+# pull the image ci built, only build here when ghcr isn't reachable
 if ! docker pull -q $IMAGE; then
   IMAGE=mint-backend:local
   sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE|" /opt/mint-backend/.env

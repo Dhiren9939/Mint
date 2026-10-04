@@ -1,0 +1,91 @@
+name: backend-deploy
+
+# pulls the image on the box and restarts compose. needs the EC2_SSH_KEY environment secret
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        type: string
+        required: true
+      APP_HOST:
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    environment: fast-deploy-single-ec2
+    runs-on: ubuntu-latest
+    env:
+      APP_HOST: ${{ inputs.APP_HOST || vars.APP_HOST }}
+      IMAGE: ${{ inputs.image }}
+      SSH_USER: admin
+
+    steps:
+      # Nothing to deploy to while the infra is down
+      - name: Check Host
+        id: host
+        run: |
+          if [ -z "$APP_HOST" ]; then
+            echo "::notice::No app host, skipping deploy"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.host.outputs.exists == 'true'
+        with:
+          sparse-checkout: |
+            backend/config
+            backend/docker-compose.prod.yml
+            .github/workflows/scripts
+
+      # a box that was just created can take a minute to answer ssh
+      - name: Set Up SSH
+        if: steps.host.outputs.exists == 'true'
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          cat > ~/.ssh/config <<CONF
+          Host $APP_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/id_deploy
+            ConnectTimeout 5
+            ControlMaster auto
+            ControlPath ~/.ssh/cm-%C
+            ControlPersist 300
+          CONF
+          for i in $(seq 1 36); do
+            ssh-keyscan -H "$APP_HOST" >> ~/.ssh/known_hosts 2>/dev/null && ssh "$APP_HOST" true && exit 0
+            sleep 5
+          done
+          echo "::error::$APP_HOST didn't answer ssh"
+          exit 1
+
+      - name: Ship Config
+        if: steps.host.outputs.exists == 'true'
+        run: |
+          mkdir /tmp/cfg
+          cp backend/config/* backend/docker-compose.prod.yml .github/workflows/scripts/schema.sql /tmp/cfg
+          tar -C /tmp/cfg -cz . | ssh "$APP_HOST" 'mkdir -p /tmp/mint-cfg && tar -C /tmp/mint-cfg -xz'
+
+      # The token only lives on the box for the pull
+      - name: Pull Image
+        if: steps.host.outputs.exists == 'true'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | ssh "$APP_HOST" "sudo docker login ghcr.io -u '${{ github.actor }}' --password-stdin" >/dev/null
+          ssh "$APP_HOST" "sudo docker pull -q '$IMAGE'" || { ssh "$APP_HOST" 'sudo docker logout ghcr.io'; exit 1; }
+          ssh "$APP_HOST" 'sudo docker logout ghcr.io' >/dev/null
+
+      - name: Redeploy
+        if: steps.host.outputs.exists == 'true'
+        run: ssh "$APP_HOST" bash -s -- "$IMAGE" < .github/workflows/scripts/redeploy.sh

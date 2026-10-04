@@ -7,18 +7,15 @@ IMAGE=$1
 CONFIG=/opt/mint-backend/config
 COMPOSE="docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml"
 
-# a fresh box is still running its user data, wait for it to finish
-for i in $(seq 1 90); do
-  [ -f /var/log/mint-ready ] && break
-  if [ -f /var/log/mint-failed ]; then
-    echo "box setup failed, tail of /var/log/user-data.log:"
-    sudo tail -30 /var/log/user-data.log
-    exit 1
-  fi
-  [ $((i % 6)) = 1 ] && echo "waiting for the box setup to finish"
-  sleep 10
-done
-[ -f /var/log/mint-ready ] || { echo "box setup didn't finish in 15 minutes"; exit 1; }
+# a fresh box may still be running its user data, wait for it whatever the outcome.
+# the deploy only needs docker and the env file, a failed first app start is what it fixes
+echo "waiting for the box setup to finish"
+sudo timeout 900 cloud-init status --wait >/dev/null || true
+if ! command -v docker >/dev/null || ! sudo test -f /opt/mint-backend/.env; then
+  echo "box setup didn't get far enough, tail of /var/log/user-data.log:"
+  sudo tail -30 /var/log/user-data.log
+  exit 1
+fi
 
 sudo cp /tmp/mint-cfg/* $CONFIG
 rm -rf /tmp/mint-cfg

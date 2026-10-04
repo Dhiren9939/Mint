@@ -1,5 +1,7 @@
 name: create-app
 
+# the image builds while terraform applies, so it's in ghcr before the box boots and pulls it
+
 on:
   workflow_dispatch:
 
@@ -15,12 +17,18 @@ jobs:
     uses: ./.github/workflows/infra-cd.yml
     secrets: inherit
 
-  backend-cd:
-    needs: infra-cd
+  build:
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/backend-cd.yml
+    uses: ./.github/workflows/backend-build.yml
+
+  deploy:
+    needs: [infra-cd, build]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/backend-deploy.yml
     with:
+      image: ${{ needs.build.outputs.image }}
       APP_HOST: ${{ needs.infra-cd.outputs.APP_HOST }}
     secrets: inherit

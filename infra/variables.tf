@@ -66,5 +66,5 @@ variable "state_bucket" {
 variable "image" {
   type        = string
   description = "The api image a fresh box pulls, backend-cd pushes it"
-  default     = "ghcr.io/dhiren9939/mint-backend:latest"
+  default     = "ghcr.io/dhiren9939/mint-backend:fast-deploy-single-ec2"
 }
