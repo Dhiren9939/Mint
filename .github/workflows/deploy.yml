@@ -1,0 +1,62 @@
+name: deploy
+
+# builds the image here, ships it to the box over ssh and restarts compose.
+# needs the EC2_SSH_KEY secret, the private key for the box's key pair
+
+on:
+  push:
+    branches: [fast-deploy-single-ec2]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".dockerignore"
+      - ".github/workflows/deploy.yml"
+      - ".github/workflows/scripts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: mint-backend:${{ github.sha }}
+      HOST: fs.dhiren.xyz
+      SSH_USER: admin
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: backend/Dockerfile
+          load: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set Up SSH
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          printf 'Host %s\n  User %s\n  IdentityFile ~/.ssh/id_deploy\n' "$HOST" "$SSH_USER" > ~/.ssh/config
+
+      # the box is too small to build, so the image travels instead of a registry
+      - name: Ship Image
+        run: docker save "$IMAGE" | gzip | ssh "$HOST" 'gunzip | sudo docker load'
+
+      - name: Redeploy
+        run: ssh "$HOST" bash -s -- "$IMAGE" "$GITHUB_SHA" < .github/workflows/scripts/redeploy.sh
