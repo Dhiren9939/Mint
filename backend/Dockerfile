@@ -1,12 +1,30 @@
+# build from the repo root: docker build -f backend/Dockerfile -t mint-backend .
+FROM node:22-alpine AS frontend
+
+WORKDIR /frontend
+
+COPY frontend/package*.json ./
+
+RUN npm ci
+
+COPY frontend/ .
+
+# same origin as the api, so the paths in the code are enough
+ENV VITE_API_URL=
+
+RUN npm run build
+
 FROM maven:3.9.14-eclipse-temurin-21-alpine AS build
 
 WORKDIR /app
 
-COPY pom.xml .
+COPY backend/pom.xml .
 
 RUN mvn dependency:go-offline
 
-COPY src ./src
+COPY backend/src ./src
+
+COPY --from=frontend /frontend/dist ./src/main/resources/static
 
 RUN mvn package -DskipTests
 

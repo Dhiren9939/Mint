@@ -1,10 +1,31 @@
 name: mint-backend
 
 services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/mint-backend/caddy-data:/data
+    depends_on:
+      - api
+    networks:
+      mint-net:
+    restart:
+      unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 50m
+
   api:
     image: ${IMAGE_TAG:?IMAGE_TAG must be set}
-    ports:
-      - "80:8080"
+    expose:
+      - "8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       JAVA_TOOL_OPTIONS: >-
@@ -13,11 +34,13 @@ services:
         -XX:+UseG1GC
       DB_USERNAME: ${DB_USERNAME:?DB_USERNAME must be set}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-      DB_HOST: ${DB_HOST:?DB_HOST must be set}
+      USER_FILES_BUCKET: ${USER_FILES_BUCKET:?USER_FILES_BUCKET must be set}
     volumes:
       - /opt/mint-backend/config/:/app/config/:ro
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       mint-net:
@@ -26,11 +49,35 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 450m
+
+  postgres:
+    image: postgres:16-alpine
+    command: [ "postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=30" ]
+    environment:
+      POSTGRES_DB: mintdb
+      POSTGRES_USER: ${DB_USERNAME:?DB_USERNAME must be set}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+    volumes:
+      - mint-postgres:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d mintdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      mint-net:
+    restart:
+      unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 250m
 
   redis:
     image: redis:7-alpine
-    command: [ "redis-server", "--save", "60", "1", "--maxmemory", "150mb",
+    command: [ "redis-server", "--save", "60", "1", "--maxmemory", "80mb",
                "--maxmemory-policy", "allkeys-lru" ]
     volumes:
       - mint-redis:/data
@@ -47,9 +94,10 @@ services:
     deploy:
       resources:
         limits:
-          memory: 200m
+          memory: 120m
 
 volumes:
   mint-redis:
+  mint-postgres:
 networks:
   mint-net:
