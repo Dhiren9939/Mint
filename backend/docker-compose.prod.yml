@@ -74,6 +74,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 30s
+      start_interval: 1s
     networks:
       mint-net:
     restart:
@@ -94,7 +96,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 30s
+      start_interval: 1s
     networks:
       mint-net:
     restart:

@@ -76,6 +76,11 @@ jobs:
           cp backend/config/* backend/docker-compose.prod.yml .github/workflows/scripts/schema.sql /tmp/cfg
           tar -C /tmp/cfg -cz . | ssh "$APP_HOST" 'mkdir -p /tmp/mint-cfg && tar -C /tmp/mint-cfg -xz'
 
+      # on a fresh box the user data is already pulling and starting everything, don't compete with it
+      - name: Wait For Box
+        if: steps.host.outputs.exists == 'true'
+        run: ssh "$APP_HOST" 'sudo timeout 900 cloud-init status --wait >/dev/null || true; sudo grep "^PHASE" /var/log/user-data.log || true'
+
       # the package is public, no login needed
       - name: Pull Image
         if: steps.host.outputs.exists == 'true'

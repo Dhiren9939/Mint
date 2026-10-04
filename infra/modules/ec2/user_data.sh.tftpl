@@ -1,6 +1,7 @@
 #!/bin/bash
 # sets up the whole app on this one box: postgres, redis, the api with the frontend, and caddy
-# log is at /var/log/user-data.log, /var/log/mint-ready shows up when it worked, /var/log/mint-failed when it didn't
+# log is at /var/log/user-data.log, /var/log/mint-ready shows up when it worked, /var/log/mint-failed when it didn't.
+# PHASE lines carry the seconds since boot, the deploy prints them
 exec > >(tee -a /var/log/user-data.log) 2>&1
 set -euxo pipefail
 trap 'touch /var/log/mint-failed' ERR
@@ -9,35 +10,25 @@ export HOME=/root
 
 SRC=/opt/src/Mint
 CONFIG=/opt/mint-backend/config
+COMPOSE="docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml"
 IMAGE=${image}
 
-# 1gb of ram isn't enough to build the image
-fallocate -l 2G /swapfile
-chmod 600 /swapfile
-mkswap /swapfile
-swapon /swapfile
-echo '/swapfile none swap sw 0 0' >> /etc/fstab
+phase() { set +x; echo "PHASE $(cut -d' ' -f1 /proc/uptime)s $1"; set -x; }
+phase start
 
-apt-get update
-apt-get install -y ca-certificates curl git
+# the code comes down while apt runs, python is always there for cloud-init
+mkdir -p $SRC
+python3 -c "import urllib.request,sys; sys.stdout.buffer.write(urllib.request.urlopen(sys.argv[1]).read())" \
+  "${trimsuffix(repo_url, ".git")}/archive/refs/heads/${repo_branch}.tar.gz" | tar -xz -C $SRC --strip-components 1 &
+FETCH=$!
 
-# docker
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-chmod a+r /etc/apt/keyrings/docker.asc
-cat > /etc/apt/sources.list.d/docker.sources <<DOCKER
-Types: deb
-URIs: https://download.docker.com/linux/debian
-Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
-Components: stable
-Architectures: $(dpkg --print-architecture)
-Signed-By: /etc/apt/keyrings/docker.asc
-DOCKER
+# debian's own docker, one apt update and no extra repo. recommends would pull needrestart and friends
 apt-get update
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt-get install -y --no-install-recommends docker.io docker-cli docker-compose apparmor ca-certificates
 systemctl enable --now docker
+phase docker
 
-git clone --depth 1 --branch ${repo_branch} ${repo_url} $SRC
+wait $FETCH
 
 # config the api container mounts, and the files compose needs next to it
 mkdir -p $CONFIG
@@ -66,10 +57,9 @@ if [ "$1" = down ]; then
 else
   src=/data; dst=${cert_backup}/
 fi
-docker run --rm -e AWS_DEFAULT_REGION=ap-south-1 -v /opt/mint-backend/caddy-data:/data   amazon/aws-cli s3 sync "$src" "$dst" --only-show-errors
+docker run --rm -e AWS_DEFAULT_REGION=ap-south-1 -v /opt/mint-backend/caddy-data:/data amazon/aws-cli s3 sync "$src" "$dst" --only-show-errors
 SYNC
 chmod +x /usr/local/bin/caddy-cert-sync
-/usr/local/bin/caddy-cert-sync down || true
 
 cat > /etc/systemd/system/caddy-cert-sync.service <<UNIT
 [Service]
@@ -86,14 +76,27 @@ UNIT
 systemctl daemon-reload
 systemctl enable --now caddy-cert-sync.timer
 
-# pull the image ci built, only build here when ghcr isn't reachable
-if ! docker pull -q $IMAGE; then
+# every image at once, next to the cert restore
+(/usr/local/bin/caddy-cert-sync down || true) &
+RESTORE=$!
+if ! $COMPOSE pull -q; then
+  # ghcr didn't give us the app image, build it here. 1gb of ram needs swap for that
+  fallocate -l 2G /swapfile
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  apt-get install -y --no-install-recommends docker-buildx
   IMAGE=mint-backend:local
   sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE|" /opt/mint-backend/.env
   docker build -f $SRC/backend/Dockerfile -t $IMAGE $SRC
   docker builder prune -af
+  $COMPOSE pull -q postgres redis caddy
 fi
+wait $RESTORE
+phase images
 
-docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml up -d --wait --wait-timeout 300
+$COMPOSE up -d --wait --wait-timeout 300
+phase ready
 
 touch /var/log/mint-ready
