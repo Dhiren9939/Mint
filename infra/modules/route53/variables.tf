@@ -1,5 +1,5 @@
-variable "domain_name" {
-  description = "The target domain name"
+variable "record_name" {
+  description = "The full record name, like mint.example.com"
   type        = string
 }
 

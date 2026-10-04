@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     bucket       = "dhiren9939-state-bucket"
-    key          = "projects/mint-bench-sql-infra.tfstate"
+    key          = "projects/mint-fast-deploy-infra.tfstate"
     region       = "ap-south-1"
     use_lockfile = true
   }
@@ -18,10 +18,19 @@ provider "aws" {
   region = var.region
 }
 
+locals {
+  name        = var.environment == "prod" ? "mint" : "mint-${var.environment}"
+  app_domain  = "${var.app_subdomain}.${var.domain_name}"
+  user_files  = "${local.name}-user-files-bucket"
+  cert_prefix = "mint-fast-deploy/caddy"
+}
+
 module "iam" {
   source                = "./modules/iam"
   ec2_arn               = module.ec2.server_instance_arn
-  user_files_bucket_arn = "arn:aws:s3:::${var.mint_user_files}"
+  user_files_bucket_arn = module.s3.user_files_bucket_arn
+  state_bucket          = var.state_bucket
+  cert_prefix           = local.cert_prefix
 }
 
 module "ec2" {
@@ -30,27 +39,28 @@ module "ec2" {
   public_subnet_id               = module.vpc.public_subnet_id
   iam_role_instance_profile_name = module.iam.iam_instance_profile_name
   ssh_public_key                 = var.ssh_public_key
-  db_host                        = module.rds.db_address
   db_username                    = var.db_username
   db_password                    = var.db_password
+  domain                         = local.app_domain
+  repo_url                       = var.repo_url
+  repo_branch                    = var.repo_branch
+  user_files_bucket              = local.user_files
+  cert_backup_uri                = "s3://${var.state_bucket}/${local.cert_prefix}"
+}
+
+module "s3" {
+  source      = "./modules/s3"
+  bucket_name = local.user_files
+  domain      = local.app_domain
 }
 
 module "vpc" {
   source = "./modules/vpc"
 }
 
-module "rds" {
-  source               = "./modules/rds"
-  db_username          = var.db_username
-  db_password          = var.db_password
-  db_subnet_group_name = module.vpc.rds_subnet_group_name
-  rds_sg_id            = module.vpc.rds_sg_id
-  db_name              = var.db_name
-}
-
 module "route53" {
-  source         = "./modules/route53"
-  domain_name    = var.domain_name
-  zone_id        = var.zone_id
-  ec2_public_ip  = module.ec2.server_public_ip
+  source        = "./modules/route53"
+  record_name   = local.app_domain
+  zone_id       = var.zone_id
+  ec2_public_ip = module.ec2.server_public_ip
 }

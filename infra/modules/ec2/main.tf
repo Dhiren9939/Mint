@@ -1,5 +1,5 @@
 resource "aws_key_pair" "mint_key" {
-  key_name   = "mint-bench-sql-key"
+  key_name   = "mint-fast-key"
   public_key = var.ssh_public_key
 }
 
@@ -12,7 +12,11 @@ resource "aws_instance" "server" {
   monitoring                  = true
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
-    db_host     = var.db_host
+    domain      = var.domain
+    repo_url    = var.repo_url
+    repo_branch = var.repo_branch
+    cert_backup = var.cert_backup_uri
+    user_files  = var.user_files_bucket
     db_username = var.db_username
     db_password = var.db_password
   })
@@ -29,7 +33,7 @@ resource "aws_instance" "server" {
 
   root_block_device {
     delete_on_termination = true
-    volume_size           = 8
+    volume_size           = 16
     volume_type           = "gp3"
   }
 

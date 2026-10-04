@@ -1,5 +1,5 @@
 resource "aws_iam_role" "mint_api_role" {
-  name = "mint-bench-sql-api-role"
+  name = "mint-fast-api-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -16,7 +16,7 @@ resource "aws_iam_role" "mint_api_role" {
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "mint-bench-sql-ec2-instance-profile"
+  name = "mint-fast-ec2-instance-profile"
   role = aws_iam_role.mint_api_role.name
 }
 
@@ -42,6 +42,19 @@ resource "aws_iam_policy" "mint_api_role_policy" {
           "s3:DeleteObject"
         ]
         Resource = "${var.user_files_bucket_arn}/*"
+      },
+      {
+        Effect   = "Allow",
+        Action   = ["s3:GetObject", "s3:PutObject"]
+        Resource = "arn:aws:s3:::${var.state_bucket}/${var.cert_prefix}/*"
+      },
+      {
+        Effect   = "Allow",
+        Action   = "s3:ListBucket"
+        Resource = "arn:aws:s3:::${var.state_bucket}"
+        Condition = {
+          StringLike = { "s3:prefix" = ["${var.cert_prefix}/*"] }
+        }
       }
     ]
   })

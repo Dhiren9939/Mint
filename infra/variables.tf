@@ -6,25 +6,20 @@ variable "region" {
 
 variable "db_username" {
   type        = string
-  description = "The username for the RDS database"
+  description = "The Postgres username"
   sensitive   = true
 }
 
 variable "db_password" {
   type        = string
-  description = "The password for the RDS database"
+  description = "The Postgres password"
   sensitive   = true
 }
 
-variable "db_name" {
-  type = string
-  description = "The name of the databse"
-  default = "mintdb"
-}
-
-variable "mint_user_files" {
-  type    = string
-  default = "mint-user-files-bucket"
+variable "environment" {
+  type        = string
+  description = "The environment name, prefixes the bucket name. prod gives mint-, anything else mint-<environment>-"
+  default     = "fs"
 }
 
 variable "ssh_public_key" {
@@ -43,4 +38,28 @@ variable "zone_id" {
   type        = string
   description = "The id of the route53 hosted zone"
   default     = "Z08728257AAJ6Q96KGZY"
+}
+
+variable "app_subdomain" {
+  type        = string
+  description = "The app is served at <app_subdomain>.<domain_name>"
+  default     = "fs"
+}
+
+variable "repo_url" {
+  type        = string
+  description = "The repo the box clones and builds"
+  default     = "https://github.com/Dhiren9939/Mint.git"
+}
+
+variable "repo_branch" {
+  type        = string
+  description = "The branch the box clones and builds"
+  default     = "fast-deploy-single-ec2"
+}
+
+variable "state_bucket" {
+  type        = string
+  description = "The bucket the caddy cert is backed up to, same one as the terraform state"
+  default     = "dhiren9939-state-bucket"
 }

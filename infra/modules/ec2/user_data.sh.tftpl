@@ -1,22 +1,104 @@
 #!/bin/bash
-# clones the two repos and runs the setup script from Mint-Bench
+# sets up the whole app on this one box: postgres, redis, the api with the frontend, and caddy
 # log is at /var/log/user-data.log, /var/log/mint-ready shows up when it worked
 exec > >(tee -a /var/log/user-data.log) 2>&1
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 export HOME=/root
 
+SRC=/opt/src/Mint
+CONFIG=/opt/mint-backend/config
+IMAGE=mint-backend:local
+
+# 1gb of ram isn't enough to build the image
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
 apt-get update
-apt-get install -y git
+apt-get install -y ca-certificates curl git
 
-git clone --depth 1 https://github.com/Dhiren9939/Mint-Bench.git /opt/src/Mint-Bench
-git clone --depth 1 --branch bench-sql-lua https://github.com/Dhiren9939/Mint.git /opt/src/Mint
+# docker
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+cat > /etc/apt/sources.list.d/docker.sources <<DOCKER
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+DOCKER
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
 
-export MINT_DIR=/opt/src/Mint
-export BENCH_DIR=/opt/src/Mint-Bench
-export DB_HOST='${db_host}'
-export DB_USERNAME='${db_username}'
-export DB_PASSWORD='${db_password}'
-bash /opt/src/Mint-Bench/bench-sql/setup-ec2.sh
+git clone --depth 1 --branch ${repo_branch} ${repo_url} $SRC
+
+# config the api container mounts, and the files compose needs next to it
+mkdir -p $CONFIG
+cp $SRC/backend/config/*.properties $SRC/backend/config/Caddyfile $SRC/backend/docker-compose.prod.yml $CONFIG
+cp $SRC/.github/workflows/scripts/schema.sql $CONFIG
+chmod -R 755 /opt/mint-backend
+
+# secrets stay out of the folder the api mounts
+cat > /opt/mint-backend/.env <<ENV
+IMAGE_TAG=$IMAGE
+DOMAIN=${domain}
+USER_FILES_BUCKET=${user_files}
+DB_USERNAME=${db_username}
+DB_PASSWORD=${db_password}
+ENV
+chmod 600 /opt/mint-backend/.env
+
+# caddy keeps its certs in s3, so a rebuilt box doesn't ask let's encrypt for a new one
+mkdir -p /opt/mint-backend/caddy-data
+cat > /usr/local/bin/caddy-cert-sync <<'SYNC'
+#!/bin/bash
+# usage: caddy-cert-sync down|up
+set -euo pipefail
+if [ "$1" = down ]; then
+  src=${cert_backup}/; dst=/data
+else
+  src=/data; dst=${cert_backup}/
+fi
+docker run --rm -e AWS_DEFAULT_REGION=ap-south-1 -v /opt/mint-backend/caddy-data:/data   amazon/aws-cli s3 sync "$src" "$dst" --only-show-errors
+SYNC
+chmod +x /usr/local/bin/caddy-cert-sync
+/usr/local/bin/caddy-cert-sync down || true
+
+cat > /etc/systemd/system/caddy-cert-sync.service <<UNIT
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/caddy-cert-sync up
+UNIT
+cat > /etc/systemd/system/caddy-cert-sync.timer <<UNIT
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now caddy-cert-sync.timer
+
+# build on the box, then drop the build cache so the disk doesn't fill up
+docker build -f $SRC/backend/Dockerfile -t $IMAGE $SRC
+docker builder prune -af
+
+docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml up -d
+
+# a file code that doesn't exist should come back as a 404
+code=""
+for i in $(seq 1 40); do
+  code=$(docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml exec -T api \
+    wget -S -O /dev/null http://localhost:8080/api/v1/file/aaaaaa 2>&1 | grep -o 'HTTP/1.1 [0-9]*' | cut -d' ' -f2 || true)
+  [ "$code" = 404 ] && break
+  sleep 5
+done
+[ "$code" = 404 ] || { echo "api didn't come up, last status '$code'"; docker compose -f $CONFIG/docker-compose.prod.yml logs --tail 50; exit 1; }
 
 touch /var/log/mint-ready
