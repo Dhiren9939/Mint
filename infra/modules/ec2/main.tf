@@ -9,7 +9,6 @@ resource "aws_instance" "server" {
   ami                         = "ami-0ad737a8b58b3fb92"
   associate_public_ip_address = true
   iam_instance_profile        = var.iam_role_instance_profile_name
-  monitoring                  = true
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
     domain      = var.domain
@@ -31,10 +30,6 @@ resource "aws_instance" "server" {
   metadata_options {
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
-  }
-
-  credit_specification {
-    cpu_credits = "unlimited"
   }
 
   root_block_device {

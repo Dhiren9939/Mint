@@ -27,7 +27,6 @@ locals {
 
 module "iam" {
   source                = "./modules/iam"
-  ec2_arn               = module.ec2.server_instance_arn
   user_files_bucket_arn = module.s3.user_files_bucket_arn
   state_bucket          = var.state_bucket
   cert_prefix           = local.cert_prefix
