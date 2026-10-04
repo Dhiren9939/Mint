@@ -1,14 +1,15 @@
 #!/bin/bash
 # sets up the whole app on this one box: postgres, redis, the api with the frontend, and caddy
-# log is at /var/log/user-data.log, /var/log/mint-ready shows up when it worked
+# log is at /var/log/user-data.log, /var/log/mint-ready shows up when it worked, /var/log/mint-failed when it didn't
 exec > >(tee -a /var/log/user-data.log) 2>&1
 set -euxo pipefail
+trap 'touch /var/log/mint-failed' ERR
 export DEBIAN_FRONTEND=noninteractive
 export HOME=/root
 
 SRC=/opt/src/Mint
 CONFIG=/opt/mint-backend/config
-IMAGE=mint-backend:local
+IMAGE=${image}
 
 # 1gb of ram isn't enough to build the image
 fallocate -l 2G /swapfile
@@ -85,20 +86,14 @@ UNIT
 systemctl daemon-reload
 systemctl enable --now caddy-cert-sync.timer
 
-# build on the box, then drop the build cache so the disk doesn't fill up
-docker build -f $SRC/backend/Dockerfile -t $IMAGE $SRC
-docker builder prune -af
+# pull the image ci built, only build here when ghcr isn't reachable without a login
+if ! docker pull -q $IMAGE; then
+  IMAGE=mint-backend:local
+  sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE|" /opt/mint-backend/.env
+  docker build -f $SRC/backend/Dockerfile -t $IMAGE $SRC
+  docker builder prune -af
+fi
 
-docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml up -d
-
-# a file code that doesn't exist should come back as a 404
-code=""
-for i in $(seq 1 40); do
-  code=$(docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml exec -T api \
-    wget -S -O /dev/null http://localhost:8080/api/v1/file/aaaaaa 2>&1 | grep -o 'HTTP/1.1 [0-9]*' | cut -d' ' -f2 || true)
-  [ "$code" = 404 ] && break
-  sleep 5
-done
-[ "$code" = 404 ] || { echo "api didn't come up, last status '$code'"; docker compose -f $CONFIG/docker-compose.prod.yml logs --tail 50; exit 1; }
+docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml up -d --wait --wait-timeout 300
 
 touch /var/log/mint-ready

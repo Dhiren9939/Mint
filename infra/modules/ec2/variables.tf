@@ -54,3 +54,8 @@ variable "user_files_bucket" {
   type        = string
   description = "The user files bucket name"
 }
+
+variable "image" {
+  type        = string
+  description = "The api image the box pulls on first boot"
+}

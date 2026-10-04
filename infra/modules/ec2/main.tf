@@ -17,6 +17,7 @@ resource "aws_instance" "server" {
     repo_branch = var.repo_branch
     cert_backup = var.cert_backup_uri
     user_files  = var.user_files_bucket
+    image       = var.image
     db_username = var.db_username
     db_password = var.db_password
   })

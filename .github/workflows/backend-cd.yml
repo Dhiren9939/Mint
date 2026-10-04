@@ -1,20 +1,17 @@
 name: backend-cd
 
 # The api image carries the frontend, so this is the deploy for both.
-# The image is built here, in parallel with the tests, and pushed to ghcr. The box only pulls the layers that changed.
-# Needs the EC2_SSH_KEY environment secret, the private key of the box's key pair.
+# The image builds while the tests run and goes to ghcr, the box only pulls the layers that changed.
 
 on:
   workflow_call:
     inputs:
-      environment:
-        type: string
-        required: true
       APP_HOST:
         type: string
-        required: true
+        required: false
   workflow_dispatch:
   push:
+    branches: [fast-deploy-single-ec2]
     paths:
       - "backend/**"
       - "frontend/**"
@@ -22,7 +19,6 @@ on:
       - ".github/workflows/backend-ci.yml"
       - ".github/workflows/frontend-ci.yml"
       - ".github/workflows/backend-cd.yml"
-      - ".github/workflows/env-config.yml"
       - ".github/workflows/scripts/**"
 
 permissions:
@@ -30,29 +26,17 @@ permissions:
   packages: write
 
 concurrency:
-  group: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || github.ref_name) }}-backend
+  group: fast-deploy-single-ec2-backend
   cancel-in-progress: true
 
 jobs:
-  # Callers pass the environment and have already checked the toggles
-  config:
-    if: ${{ !inputs.environment }}
-    uses: ./.github/workflows/env-config.yml
-
-  run-backend-ci:
-    needs: config
-    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
+  backend-ci:
     uses: ./.github/workflows/backend-ci.yml
 
-  run-frontend-ci:
-    needs: config
-    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
+  frontend-ci:
     uses: ./.github/workflows/frontend-ci.yml
 
-  # Doesn't wait for the tests, deploy does
   build-push:
-    needs: config
-    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-cd == 'true') }}
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.tag.outputs.image }}
@@ -72,23 +56,26 @@ jobs:
         id: tag
         run: |
           OWNER="${{ github.repository_owner }}"
+          echo "repo=ghcr.io/${OWNER,,}/mint-backend" >> "$GITHUB_OUTPUT"
           echo "image=ghcr.io/${OWNER,,}/mint-backend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
+      # latest is what a fresh box pulls on boot
       - name: Build and Push
         uses: docker/build-push-action@v7
         with:
           context: .
           file: backend/Dockerfile
           push: true
-          tags: ${{ steps.tag.outputs.image }}
+          tags: |
+            ${{ steps.tag.outputs.image }}
+            ${{ steps.tag.outputs.repo }}:latest
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
-    needs: [config, run-backend-ci, run-frontend-ci, build-push]
-    if: ${{ !cancelled() && needs.run-backend-ci.result == 'success' && needs.run-frontend-ci.result == 'success' && needs.build-push.result == 'success' }}
-    environment: ${{ inputs.environment || needs.config.outputs.environment }}
+    needs: [backend-ci, frontend-ci, build-push]
+    environment: fast-deploy-single-ec2
     runs-on: ubuntu-latest
     env:
       APP_HOST: ${{ inputs.APP_HOST || vars.APP_HOST }}
@@ -96,12 +83,12 @@ jobs:
       SSH_USER: admin
 
     steps:
-      # Nothing to deploy to while the environment's infra is down
+      # Nothing to deploy to while the infra is down
       - name: Check Host
         id: host
         run: |
           if [ -z "$APP_HOST" ]; then
-            echo "::notice::No app host in this environment, skipping deploy"
+            echo "::notice::No app host, skipping deploy"
             echo "exists=false" >> "$GITHUB_OUTPUT"
           else
             echo "exists=true" >> "$GITHUB_OUTPUT"
@@ -110,8 +97,12 @@ jobs:
       - uses: actions/checkout@v7
         if: steps.host.outputs.exists == 'true'
         with:
-          sparse-checkout: .github/workflows/scripts
+          sparse-checkout: |
+            backend/config
+            backend/docker-compose.prod.yml
+            .github/workflows/scripts
 
+      # a box that was just created can take a minute to answer ssh
       - name: Set Up SSH
         if: steps.host.outputs.exists == 'true'
         env:
@@ -120,15 +111,28 @@ jobs:
           install -m 700 -d ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "$APP_HOST" >> ~/.ssh/known_hosts
           cat > ~/.ssh/config <<CONF
           Host $APP_HOST
             User $SSH_USER
             IdentityFile ~/.ssh/id_deploy
+            ConnectTimeout 5
             ControlMaster auto
             ControlPath ~/.ssh/cm-%C
-            ControlPersist 120
+            ControlPersist 300
           CONF
+          for i in $(seq 1 36); do
+            ssh-keyscan -H "$APP_HOST" >> ~/.ssh/known_hosts 2>/dev/null && ssh "$APP_HOST" true && exit 0
+            sleep 5
+          done
+          echo "::error::$APP_HOST didn't answer ssh"
+          exit 1
+
+      - name: Ship Config
+        if: steps.host.outputs.exists == 'true'
+        run: |
+          mkdir /tmp/cfg
+          cp backend/config/* backend/docker-compose.prod.yml .github/workflows/scripts/schema.sql /tmp/cfg
+          tar -C /tmp/cfg -cz . | ssh "$APP_HOST" 'mkdir -p /tmp/mint-cfg && tar -C /tmp/mint-cfg -xz'
 
       # The token only lives on the box for the pull
       - name: Pull Image
@@ -136,10 +140,10 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "$GHCR_TOKEN" | ssh "$APP_HOST" "sudo docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
-          ssh "$APP_HOST" "sudo docker pull '$IMAGE'" || { ssh "$APP_HOST" 'sudo docker logout ghcr.io'; exit 1; }
-          ssh "$APP_HOST" 'sudo docker logout ghcr.io'
+          echo "$GHCR_TOKEN" | ssh "$APP_HOST" "sudo docker login ghcr.io -u '${{ github.actor }}' --password-stdin" >/dev/null
+          ssh "$APP_HOST" "sudo docker pull -q '$IMAGE'" || { ssh "$APP_HOST" 'sudo docker logout ghcr.io'; exit 1; }
+          ssh "$APP_HOST" 'sudo docker logout ghcr.io' >/dev/null
 
       - name: Redeploy
         if: steps.host.outputs.exists == 'true'
-        run: ssh "$APP_HOST" bash -s -- "$IMAGE" "$GITHUB_SHA" < .github/workflows/scripts/redeploy.sh
+        run: ssh "$APP_HOST" bash -s -- "$IMAGE" < .github/workflows/scripts/redeploy.sh

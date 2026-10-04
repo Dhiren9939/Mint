@@ -62,3 +62,9 @@ variable "state_bucket" {
   description = "The bucket the caddy cert is backed up to, same one as the terraform state"
   default     = "dhiren9939-state-bucket"
 }
+
+variable "image" {
+  type        = string
+  description = "The api image a fresh box pulls, backend-cd pushes it"
+  default     = "ghcr.io/dhiren9939/mint-backend:latest"
+}

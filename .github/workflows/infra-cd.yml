@@ -2,65 +2,41 @@ name: infra-cd
 
 on:
   workflow_call:
-    inputs:
-      environment:
-        type: string
-        required: true
     outputs:
       APP_HOST:
         value: ${{ jobs.apply.outputs.APP_HOST }}
   workflow_dispatch:
   push:
+    branches: [fast-deploy-single-ec2]
     paths:
       - "infra/**"
-      - ".github/workflows/infra-ci.yml"
       - ".github/workflows/infra-cd.yml"
-      - ".github/workflows/env-config.yml"
       - ".github/actions/setup-aws-terraform/**"
 
 concurrency:
-  group: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || github.ref_name) }}-infrastructure
+  group: fast-deploy-single-ec2-infrastructure
   cancel-in-progress: false
 
 jobs:
-  # Callers pass the environment and have already checked the toggles
-  config:
-    if: ${{ !inputs.environment }}
-    permissions:
-      contents: read
-    uses: ./.github/workflows/env-config.yml
-
-  run-ci:
-    needs: config
-    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
-    permissions:
-      id-token: write
-      contents: read
-    uses: ./.github/workflows/infra-ci.yml
-    with:
-      environment: ${{ inputs.environment || needs.config.outputs.environment }}
-    secrets: inherit
-
+  # validate, plan and apply in one job, so terraform only inits once
   apply:
-    needs: [config, run-ci]
-    if: ${{ !cancelled() && needs.run-ci.result == 'success' && (inputs.environment || needs.config.outputs.run-cd == 'true') }}
-    environment: ${{ inputs.environment || needs.config.outputs.environment }}
+    environment: fast-deploy-single-ec2
     permissions:
       id-token: write
       contents: read
     outputs:
       APP_HOST: ${{ steps.tf_out.outputs.APP_HOST }}
-
     runs-on: ubuntu-latest
     env:
-      ENVIRONMENT: ${{ inputs.environment || needs.config.outputs.environment }}
+      ENVIRONMENT: fast-deploy-single-ec2
+      TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
     defaults:
       run:
         working-directory: ./infra
 
     steps:
       - uses: actions/checkout@v7
-        name: Checkout Files
 
       - name: Setup AWS and Terraform
         uses: ./.github/actions/setup-aws-terraform
@@ -70,22 +46,21 @@ jobs:
           working-directory: "./infra"
           environment: ${{ env.ENVIRONMENT }}
 
+      - name: Terraform Validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        run: terraform plan -no-color -input=false -lock-timeout=20m -var-file="envs/$ENVIRONMENT.tfvars" -out .planfile
+
       - name: Terraform Apply
-        env:
-          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
-          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-        run: terraform apply -no-color -input=false -auto-approve -var-file="envs/$ENVIRONMENT.tfvars"
+        run: terraform apply -no-color -input=false .planfile
 
       - name: Output Resource Details
         id: tf_out
-        run: |
-          terraform output -json > /tmp/tf-outputs.json
-          out() { jq -r --arg k "$1" '.[$k].value // empty' /tmp/tf-outputs.json; }
-          echo "APP_HOST=$(out api_domain)" >> "$GITHUB_OUTPUT"
+        run: echo "APP_HOST=$(terraform output -raw api_domain)" >> "$GITHUB_OUTPUT"
 
       - name: Update Environment Variables
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           APP_HOST: ${{ steps.tf_out.outputs.APP_HOST }}
-        run: |
-          gh variable set APP_HOST --env "$ENVIRONMENT" --body "$APP_HOST"
+        run: gh variable set APP_HOST --env "$ENVIRONMENT" --body "$APP_HOST"

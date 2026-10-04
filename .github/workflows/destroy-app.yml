@@ -1,13 +1,10 @@
 name: destroy-app
 
-# Run from the environment's branch: main destroys prod, any other branch its own environment.
-# Not gated by CD_ENABLED so an environment can always be torn down.
-
 on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: "Type the environment name (prod for main) to confirm"
+        description: "Type fast-deploy-single-ec2 to confirm"
         required: true
         type: string
 
@@ -16,27 +13,22 @@ permissions:
   id-token: write
 
 concurrency:
-  group: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-lifecycle
+  group: fast-deploy-single-ec2-lifecycle
   cancel-in-progress: false
 
 jobs:
-  config:
-    uses: ./.github/workflows/env-config.yml
-
   destroy:
-    needs: config
-    if: needs.config.outputs.deployable == 'true' && inputs.confirm == needs.config.outputs.environment
-    environment: ${{ needs.config.outputs.environment }}
+    if: inputs.confirm == 'fast-deploy-single-ec2'
+    environment: fast-deploy-single-ec2
     runs-on: ubuntu-latest
     env:
-      ENVIRONMENT: ${{ needs.config.outputs.environment }}
+      ENVIRONMENT: fast-deploy-single-ec2
     defaults:
       run:
         working-directory: ./infra
 
     steps:
       - uses: actions/checkout@v7
-        name: Checkout Files
 
       - name: Setup AWS and Terraform
         uses: ./.github/actions/setup-aws-terraform
@@ -55,5 +47,4 @@ jobs:
       - name: Delete Environment Variables
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: |
-          gh variable delete APP_HOST --env "$ENVIRONMENT" || true
+        run: gh variable delete APP_HOST --env "$ENVIRONMENT" || true

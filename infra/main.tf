@@ -45,6 +45,7 @@ module "ec2" {
   repo_url                       = var.repo_url
   repo_branch                    = var.repo_branch
   user_files_bucket              = local.user_files
+  image                          = var.image
   cert_backup_uri                = "s3://${var.state_bucket}/${local.cert_prefix}"
 }
 
