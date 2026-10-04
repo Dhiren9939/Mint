@@ -76,15 +76,10 @@ jobs:
           cp backend/config/* backend/docker-compose.prod.yml .github/workflows/scripts/schema.sql /tmp/cfg
           tar -C /tmp/cfg -cz . | ssh "$APP_HOST" 'mkdir -p /tmp/mint-cfg && tar -C /tmp/mint-cfg -xz'
 
-      # The token only lives on the box for the pull
+      # the package is public, no login needed
       - name: Pull Image
         if: steps.host.outputs.exists == 'true'
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "$GHCR_TOKEN" | ssh "$APP_HOST" "sudo docker login ghcr.io -u '${{ github.actor }}' --password-stdin" >/dev/null
-          ssh "$APP_HOST" "sudo docker pull -q '$IMAGE'" || { ssh "$APP_HOST" 'sudo docker logout ghcr.io'; exit 1; }
-          ssh "$APP_HOST" 'sudo docker logout ghcr.io' >/dev/null
+        run: ssh "$APP_HOST" "sudo docker pull -q '$IMAGE'"
 
       - name: Redeploy
         if: steps.host.outputs.exists == 'true'
