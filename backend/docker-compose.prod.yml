@@ -35,8 +35,6 @@ services:
       DB_USERNAME: ${DB_USERNAME:?DB_USERNAME must be set}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       USER_FILES_BUCKET: ${USER_FILES_BUCKET:?USER_FILES_BUCKET must be set}
-    volumes:
-      - /opt/mint-backend/config/:/app/config/:ro
     # / is the frontend's index.html, it doesn't touch the db or the rate limiter
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/"]

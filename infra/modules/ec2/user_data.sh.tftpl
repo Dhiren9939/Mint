@@ -30,10 +30,9 @@ phase docker
 
 wait $FETCH
 
-# config the api container mounts, and the files compose needs next to it
+# the compose file and what it mounts: the caddyfile and the schema
 mkdir -p $CONFIG
-cp $SRC/backend/config/*.properties $SRC/backend/config/Caddyfile $SRC/backend/docker-compose.prod.yml $CONFIG
-cp $SRC/.github/workflows/scripts/schema.sql $CONFIG
+cp $SRC/backend/config/* $SRC/backend/docker-compose.prod.yml $CONFIG
 chmod -R 755 /opt/mint-backend
 
 # secrets stay out of the folder the api mounts

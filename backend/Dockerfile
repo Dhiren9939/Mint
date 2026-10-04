@@ -27,11 +27,12 @@ COPY backend/src ./src
 COPY --from=frontend /frontend/dist ./src/main/resources/static
 
 # split the jar into layers, a code change then only ships the small application layer
-RUN mvn -B -ntp package -DskipTests && cp target/*.jar app.jar     && java -Djarmode=tools -jar app.jar extract --layers --destination extracted
+RUN mvn -B -ntp package -DskipTests && cp target/*.jar app.jar \
+    && java -Djarmode=tools -jar app.jar extract --layers --destination extracted
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
 
-RUN addgroup -S app && adduser -S -G app app     && mkdir -p /opt/mint-backend/config /app     && chown -R app:app /app /opt/mint-backend
+RUN addgroup -S app && adduser -S -G app app
 
 WORKDIR /app
 

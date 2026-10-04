@@ -18,7 +18,12 @@ fi
 sudo cp /tmp/mint-cfg/* $CONFIG
 rm -rf /tmp/mint-cfg
 
-sudo sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE|" /opt/mint-backend/.env
+# a fresh box already runs this image under the branch tag, renaming it would restart the api for nothing
+running=$(sudo docker inspect --format '{{.Image}}' mint-backend-api-1 2>/dev/null || true)
+wanted=$(sudo docker image inspect --format '{{.Id}}' "$IMAGE")
+if [ "$running" != "$wanted" ]; then
+  sudo sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE|" /opt/mint-backend/.env
+fi
 
 # --wait returns once the api healthcheck passes
 if ! sudo $COMPOSE up -d --wait --wait-timeout 180; then

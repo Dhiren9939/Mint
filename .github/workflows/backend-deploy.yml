@@ -42,7 +42,7 @@ jobs:
           sparse-checkout: |
             backend/config
             backend/docker-compose.prod.yml
-            .github/workflows/scripts
+            .github/workflows/scripts/redeploy.sh
 
       # a box that was just created can take a minute to answer ssh
       - name: Set Up SSH
@@ -73,7 +73,7 @@ jobs:
         if: steps.host.outputs.exists == 'true'
         run: |
           mkdir /tmp/cfg
-          cp backend/config/* backend/docker-compose.prod.yml .github/workflows/scripts/schema.sql /tmp/cfg
+          cp backend/config/* backend/docker-compose.prod.yml /tmp/cfg
           tar -C /tmp/cfg -cz . | ssh "$APP_HOST" 'mkdir -p /tmp/mint-cfg && tar -C /tmp/mint-cfg -xz'
 
       # on a fresh box the user data is already pulling and starting everything, don't compete with it
