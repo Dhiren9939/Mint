@@ -1,0 +1,107 @@
+name: backend-cd
+
+# The api image carries the frontend, so this is the deploy for both.
+# The image is built here and sent to the box over ssh, the box is too small to build.
+# Needs the EC2_SSH_KEY environment secret, the private key of the box's key pair.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      APP_HOST:
+        type: string
+        required: true
+  workflow_dispatch:
+  push:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".dockerignore"
+      - ".github/workflows/backend-ci.yml"
+      - ".github/workflows/frontend-ci.yml"
+      - ".github/workflows/backend-cd.yml"
+      - ".github/workflows/env-config.yml"
+      - ".github/workflows/scripts/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || github.ref_name) }}-backend
+  cancel-in-progress: true
+
+jobs:
+  # Callers pass the environment and have already checked the toggles
+  config:
+    if: ${{ !inputs.environment }}
+    uses: ./.github/workflows/env-config.yml
+
+  run-backend-ci:
+    needs: config
+    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
+    uses: ./.github/workflows/backend-ci.yml
+
+  run-frontend-ci:
+    needs: config
+    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
+    uses: ./.github/workflows/frontend-ci.yml
+
+  deploy:
+    needs: [config, run-backend-ci, run-frontend-ci]
+    if: ${{ !cancelled() && needs.run-backend-ci.result == 'success' && needs.run-frontend-ci.result == 'success' && (inputs.environment || needs.config.outputs.run-cd == 'true') }}
+    environment: ${{ inputs.environment || needs.config.outputs.environment }}
+    runs-on: ubuntu-latest
+    env:
+      APP_HOST: ${{ inputs.APP_HOST || vars.APP_HOST }}
+      IMAGE: mint-backend:${{ github.sha }}
+      SSH_USER: admin
+
+    steps:
+      # Nothing to deploy to while the environment's infra is down
+      - name: Check Host
+        id: host
+        run: |
+          if [ -z "$APP_HOST" ]; then
+            echo "::notice::No app host in this environment, skipping deploy"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.host.outputs.exists == 'true'
+
+      - uses: docker/setup-buildx-action@v4
+        if: steps.host.outputs.exists == 'true'
+
+      - name: Build
+        if: steps.host.outputs.exists == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: backend/Dockerfile
+          load: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set Up SSH
+        if: steps.host.outputs.exists == 'true'
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$APP_HOST" >> ~/.ssh/known_hosts
+          printf 'Host %s\n  User %s\n  IdentityFile ~/.ssh/id_deploy\n' "$APP_HOST" "$SSH_USER" > ~/.ssh/config
+
+      - name: Ship Image
+        if: steps.host.outputs.exists == 'true'
+        run: docker save "$IMAGE" | gzip | ssh "$APP_HOST" 'gunzip | sudo docker load'
+
+      - name: Redeploy
+        if: steps.host.outputs.exists == 'true'
+        run: ssh "$APP_HOST" bash -s -- "$IMAGE" "$GITHUB_SHA" < .github/workflows/scripts/redeploy.sh

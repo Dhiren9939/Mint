@@ -18,8 +18,7 @@ variable "db_password" {
 
 variable "environment" {
   type        = string
-  description = "The environment name, prefixes the bucket name. prod gives mint-, anything else mint-<environment>-"
-  default     = "fs"
+  description = "The environment, the name of its branch. prefixes the resource names, prod gives mint-, anything else mint-<environment>-"
 }
 
 variable "ssh_public_key" {

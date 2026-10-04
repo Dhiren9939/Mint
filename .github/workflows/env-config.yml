@@ -1,0 +1,70 @@
+name: env-config
+
+# Maps the branch to its environment and reads the environment's CI/CD toggles.
+# main deploys to prod, any other branch deploys to the environment of the same name,
+# but only if that branch carries infra/envs/<environment>.tfvars.
+# Pull requests always run CI: environments only allow their own branch, so a PR can't read the toggles.
+
+on:
+  workflow_call:
+    outputs:
+      environment:
+        value: ${{ jobs.resolve.outputs.environment }}
+      deployable:
+        value: ${{ jobs.resolve.outputs.deployable }}
+      run-ci:
+        value: ${{ github.event_name == 'pull_request' && jobs.resolve.outputs.deployable == 'true' || jobs.toggles.outputs.run-ci == 'true' }}
+      run-cd:
+        value: ${{ github.event_name != 'pull_request' && jobs.toggles.outputs.run-cd == 'true' }}
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      deployable: ${{ steps.env.outputs.deployable }}
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout Environments
+        with:
+          sparse-checkout: infra/envs
+
+      - name: Resolve Environment
+        id: env
+        env:
+          BRANCH: ${{ github.base_ref || github.ref_name }}
+        run: |
+          if [ "$BRANCH" = "main" ]; then
+            ENVIRONMENT=prod
+          else
+            ENVIRONMENT="$BRANCH"
+          fi
+          echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+
+          if [ -f "infra/envs/$ENVIRONMENT.tfvars" ]; then
+            echo "deployable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployable=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$BRANCH has no infra/envs/$ENVIRONMENT.tfvars, skipping"
+          fi
+
+  toggles:
+    needs: resolve
+    if: needs.resolve.outputs.deployable == 'true' && github.event_name != 'pull_request'
+    environment: ${{ needs.resolve.outputs.environment }}
+    runs-on: ubuntu-latest
+    outputs:
+      run-ci: ${{ steps.flags.outputs.run-ci }}
+      run-cd: ${{ steps.flags.outputs.run-cd }}
+
+    steps:
+      # CD always runs CI first, so enabling CD implies CI
+      - name: Read Toggles
+        id: flags
+        run: |
+          echo "run-ci=${{ vars.CI_ENABLED == 'true' || vars.CD_ENABLED == 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "run-cd=${{ vars.CD_ENABLED == 'true' }}" >> "$GITHUB_OUTPUT"

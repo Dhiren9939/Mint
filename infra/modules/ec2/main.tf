@@ -20,7 +20,12 @@ resource "aws_instance" "server" {
     db_username = var.db_username
     db_password = var.db_password
   })
-  user_data_replace_on_change = true
+  user_data_replace_on_change = false
+
+  # postgres lives on this disk, a new user data must not replace the instance
+  lifecycle {
+    ignore_changes = [user_data]
+  }
 
   metadata_options {
     http_tokens                 = "required"
