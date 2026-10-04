@@ -43,4 +43,4 @@ jobs:
           key: maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: maven-
       - name: Build Backend
-        run: mvn package
+        run: mvn -B -ntp package

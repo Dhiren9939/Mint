@@ -6,6 +6,13 @@ IMAGE=$1
 SHA=$2
 SRC=/opt/src/Mint
 CONFIG=/opt/mint-backend/config
+# the very first deploy can land while user data is still setting the box up
+for i in $(seq 1 120); do
+  [ -f /var/log/mint-ready ] && break
+  sleep 10
+done
+[ -f /var/log/mint-ready ] || { echo "box setup didn't finish"; exit 1; }
+
 COMPOSE="docker compose --env-file /opt/mint-backend/.env -f $CONFIG/docker-compose.prod.yml"
 
 # config, compose file and schema come from the same commit as the image
@@ -32,5 +39,5 @@ if [ "$code" != 404 ]; then
 fi
 
 # keep the disk free, only the running image stays
-sudo docker images mint-backend --format '{{.Repository}}:{{.Tag}}' | grep -vx "$IMAGE" | xargs -r sudo docker rmi || true
+sudo docker images --filter 'reference=*mint-backend' --format '{{.Repository}}:{{.Tag}}' | grep -vx "$IMAGE" | xargs -r sudo docker rmi || true
 sudo docker image prune -f

@@ -1,7 +1,7 @@
 name: backend-cd
 
 # The api image carries the frontend, so this is the deploy for both.
-# The image is built here and sent to the box over ssh, the box is too small to build.
+# The image is built here, in parallel with the tests, and pushed to ghcr. The box only pulls the layers that changed.
 # Needs the EC2_SSH_KEY environment secret, the private key of the box's key pair.
 
 on:
@@ -27,6 +27,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
   group: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || github.ref_name) }}-backend
@@ -48,14 +49,50 @@ jobs:
     if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-ci == 'true') }}
     uses: ./.github/workflows/frontend-ci.yml
 
+  # Doesn't wait for the tests, deploy does
+  build-push:
+    needs: config
+    if: ${{ !cancelled() && (inputs.environment || needs.config.outputs.run-cd == 'true') }}
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.tag.outputs.image }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Image Tag
+        id: tag
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          echo "image=ghcr.io/${OWNER,,}/mint-backend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and Push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.tag.outputs.image }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
-    needs: [config, run-backend-ci, run-frontend-ci]
-    if: ${{ !cancelled() && needs.run-backend-ci.result == 'success' && needs.run-frontend-ci.result == 'success' && (inputs.environment || needs.config.outputs.run-cd == 'true') }}
+    needs: [config, run-backend-ci, run-frontend-ci, build-push]
+    if: ${{ !cancelled() && needs.run-backend-ci.result == 'success' && needs.run-frontend-ci.result == 'success' && needs.build-push.result == 'success' }}
     environment: ${{ inputs.environment || needs.config.outputs.environment }}
     runs-on: ubuntu-latest
     env:
       APP_HOST: ${{ inputs.APP_HOST || vars.APP_HOST }}
-      IMAGE: mint-backend:${{ github.sha }}
+      IMAGE: ${{ needs.build-push.outputs.image }}
       SSH_USER: admin
 
     steps:
@@ -72,20 +109,8 @@ jobs:
 
       - uses: actions/checkout@v7
         if: steps.host.outputs.exists == 'true'
-
-      - uses: docker/setup-buildx-action@v4
-        if: steps.host.outputs.exists == 'true'
-
-      - name: Build
-        if: steps.host.outputs.exists == 'true'
-        uses: docker/build-push-action@v7
         with:
-          context: .
-          file: backend/Dockerfile
-          load: true
-          tags: ${{ env.IMAGE }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          sparse-checkout: .github/workflows/scripts
 
       - name: Set Up SSH
         if: steps.host.outputs.exists == 'true'
@@ -96,11 +121,24 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H "$APP_HOST" >> ~/.ssh/known_hosts
-          printf 'Host %s\n  User %s\n  IdentityFile ~/.ssh/id_deploy\n' "$APP_HOST" "$SSH_USER" > ~/.ssh/config
+          cat > ~/.ssh/config <<CONF
+          Host $APP_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/id_deploy
+            ControlMaster auto
+            ControlPath ~/.ssh/cm-%C
+            ControlPersist 120
+          CONF
 
-      - name: Ship Image
+      # The token only lives on the box for the pull
+      - name: Pull Image
         if: steps.host.outputs.exists == 'true'
-        run: docker save "$IMAGE" | gzip | ssh "$APP_HOST" 'gunzip | sudo docker load'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | ssh "$APP_HOST" "sudo docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+          ssh "$APP_HOST" "sudo docker pull '$IMAGE'" || { ssh "$APP_HOST" 'sudo docker logout ghcr.io'; exit 1; }
+          ssh "$APP_HOST" 'sudo docker logout ghcr.io'
 
       - name: Redeploy
         if: steps.host.outputs.exists == 'true'
